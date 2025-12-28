@@ -1,6 +1,6 @@
 import Roact from "@rbxts/roact";
 import { Players, RunService, UserInputService } from "@rbxts/services";
-import { MotionFade } from "./Motion/MotionFade";
+import { MotionFade } from "./motion/motion-fade";
 
 export interface HoverFrameProps {
 	FadeTime?: number;

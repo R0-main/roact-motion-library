@@ -1,9 +1,9 @@
 import Roact from "@rbxts/roact";
-import { MotionTween } from "./MotionTween";
+import { MotionTween } from "./motion-tween";
 
-export interface MotionSlideProps {
-	From?: UDim2;
-	To: UDim2;
+export interface MotionRotateProps {
+	From?: number;
+	To: number;
 	Speed?: number; // Duration in seconds
 	Looped?: boolean;
 	Easing?: Enum.EasingStyle;
@@ -14,8 +14,8 @@ export interface MotionSlideProps {
 	OnFinished?: () => void;
 }
 
-export class MotionSlide extends Roact.Component<MotionSlideProps> {
-	public static defaultProps: Partial<MotionSlideProps> = {
+export class MotionRotate extends Roact.Component<MotionRotateProps> {
+	public static defaultProps: Partial<MotionRotateProps> = {
 		Speed: 1,
 		Looped: false,
 		Easing: Enum.EasingStyle.Sine,
@@ -30,8 +30,8 @@ export class MotionSlide extends Roact.Component<MotionSlideProps> {
 
 		return (
 			<MotionTween
-				Goal={{ Position: To }}
-				From={From !== undefined ? { Position: From } : undefined}
+				Goal={{ Rotation: To }}
+				From={From !== undefined ? { Rotation: From } : undefined}
 				Speed={Speed}
 				Looped={Looped}
 				Easing={Easing}

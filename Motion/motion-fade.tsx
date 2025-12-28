@@ -1,5 +1,5 @@
 import Roact from "@rbxts/roact";
-import { MotionTween } from "./MotionTween";
+import { MotionTween } from "./motion-tween";
 
 export interface MotionFadeProps {
 	From?: number;

@@ -1,3 +1,3 @@
 export * from "./HoverFrame";
-export * from "./Motion";
+export * from "./motion";
 export * from "./OnHover";
