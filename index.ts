@@ -1,3 +1,3 @@
-export * from "./HoverFrame";
+export * from "./hover-frame";
 export * from "./motion";
-export * from "./OnHover";
+export * from "./on-hover";

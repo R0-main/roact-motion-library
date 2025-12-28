@@ -1,4 +1,4 @@
-import { HoverBase } from "./HoverBase";
+import { HoverBase } from "./hover-base";
 
 export class OnHover extends HoverBase {
 	protected shouldRender(hovered: boolean) {
