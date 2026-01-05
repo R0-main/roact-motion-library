@@ -22,7 +22,7 @@ Most motion components share these properties:
 ### `MotionSlide`
 Animates the `Position` property.
 
-```tsx
+```js
 <frame Position={UDim2.fromScale(0, 0)} Size={UDim2.fromScale(0.1, 0.1)}>
     {/* Slide to the center of the screen over 1 second */}
     <MotionSlide To={UDim2.fromScale(0.5, 0.5)} Speed={1} Easing={Enum.EasingStyle.Bounce} />
@@ -45,7 +45,7 @@ Animates transparency. Defaults to `BackgroundTransparency` but can target other
 ### `MotionScale`
 Animates the `Size`.
 
-```tsx
+```js
 <imagebutton>
     <OnHover>
         <MotionScale To={1.1} Speed={0.15} />
