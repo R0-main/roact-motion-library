@@ -14,7 +14,7 @@ export interface HoverContextValue {
 }
 
 export const HoverContext = Roact.createContext<HoverContextValue>({
-	hovered: false,
+	hovered: undefined,
 	isResetEnabled: false,
 	resetProps: undefined,
 });

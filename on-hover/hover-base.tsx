@@ -63,7 +63,7 @@ export abstract class HoverBase extends Roact.Component<OnHoverProps, OnHoverSta
 					this.setState({ hovered: false });
 				});
 			} else {
-				warn(`Hover component must be a descendant of a GuiObject. Parent is ${folder.Parent?.ClassName}`);
+				// warn(`Hover component must be a descendant of a GuiObject. Parent is ${folder.Parent?.ClassName} | ${target}`);
 			}
 		});
 	}
