@@ -1,7 +1,6 @@
 import Roact from "@rbxts/roact";
 import { HoverContext, ResetProps } from "../hover-context";
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface OnHoverProps {
 	ResetToBeforeHover?: boolean | ResetProps;
 	ResetDuration?: number;
@@ -80,6 +79,7 @@ export abstract class HoverBase extends Roact.Component<OnHoverProps, OnHoverSta
 	public render() {
 		const { ResetToBeforeHover, ResetDuration, ResetEasing, ResetEasingDirection, ResetDelay } = this.props;
 		const { hovered } = this.state;
+		print(`[HoverBase] render. hovered: ${hovered}`);
 
 		const showChildren = ResetToBeforeHover ? true : this.shouldRender(hovered);
 

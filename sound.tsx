@@ -1,5 +1,6 @@
 import Roact from "@rbxts/roact";
 import { SoundService } from "@rbxts/services";
+import { HoverContext, HoverContextValue } from "./hover-context";
 
 interface SoundProps {
 	Id: string | number;
@@ -24,7 +25,7 @@ class SoundComponent extends Roact.Component<SoundProps> {
 	};
 
 	public render() {
-		print("Rendering Sound Component");
+		// print("Rendering Sound Component");
 		const props = this.props;
 		const { Id, OnFinished } = props;
 
@@ -42,27 +43,35 @@ class SoundComponent extends Roact.Component<SoundProps> {
 			finalId = tostring(Id);
 		}
 
-		const soundElement = Roact.createElement("Sound", {
-			SoundId: finalId,
-			Playing: true,
-			Volume: props.Volume,
-			PlaybackSpeed: props.PlaybackSpeed,
-			Looped: props.Looped,
-			TimePosition: props.TimePosition,
-			RollOffMaxDistance: props.RollOffMaxDistance,
-			RollOffMinDistance: props.RollOffMinDistance,
-			RollOffMode: props.RollOffMode,
-			SoundGroup: props.SoundGroup,
-			PlayOnRemove: props.PlayOnRemove,
-			[Roact.Event.Ended]: () => {
-				if (OnFinished) {
-					OnFinished();
-				}
-			},
-		});
+		return (
+			<HoverContext.Consumer
+				render={(contextValue: HoverContextValue) => {
+					const { hovered } = contextValue;
+					const shouldPlay = hovered ?? true;
 
-		// Always use a Portal to ensure the Sound has a parent
-		return <Roact.Portal target={props.At ?? SoundService}>{soundElement}</Roact.Portal>;
+					const soundElement = Roact.createElement("Sound", {
+						SoundId: finalId,
+						Playing: shouldPlay,
+						Volume: props.Volume,
+						PlaybackSpeed: props.PlaybackSpeed,
+						Looped: props.Looped,
+						TimePosition: props.TimePosition,
+						RollOffMaxDistance: props.RollOffMaxDistance,
+						RollOffMinDistance: props.RollOffMinDistance,
+						RollOffMode: props.RollOffMode,
+						SoundGroup: props.SoundGroup,
+						PlayOnRemove: props.PlayOnRemove,
+						[Roact.Event.Ended]: () => {
+							if (OnFinished) {
+								OnFinished();
+							}
+						},
+					});
+
+					return <Roact.Portal target={props.At ?? SoundService}>{soundElement}</Roact.Portal>;
+				}}
+			/>
+		);
 	}
 }
 
