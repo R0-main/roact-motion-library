@@ -33,7 +33,7 @@ class SoundComponent extends Roact.Component<SoundProps> {
 			finalId = `rbxassetid://${Id}`;
 		} else if (typeIs(Id, "string")) {
 			// Check if it's purely a number string and doesn't already have a protocol
-			if (tonumber(Id) !== undefined && !Id.find("://")[0]) {
+			if (tonumber(Id) !== undefined && Id.find("://")[0] === undefined) {
 				finalId = `rbxassetid://${Id}`;
 			} else {
 				finalId = Id;
