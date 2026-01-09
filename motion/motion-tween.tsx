@@ -1,5 +1,6 @@
 import Roact from "@rbxts/roact";
 import { TweenService } from "@rbxts/services";
+import { HoverContext, ResetProps, HoverContextValue } from "../hover-context";
 
 function shallowEqual(a: Record<string, unknown> | undefined, b: Record<string, unknown> | undefined) {
 	if (a === b) return true;
@@ -17,7 +18,7 @@ function shallowEqual(a: Record<string, unknown> | undefined, b: Record<string, 
 export interface MotionTweenProps {
 	Goal: Record<string, unknown>; // The properties to tween to
 	From?: Record<string, unknown>; // Initial properties
-	Speed?: number; // Duration in seconds
+	Duration?: number; // Duration in seconds
 	Looped?: boolean;
 	Easing?: Enum.EasingStyle;
 	EasingDirection?: Enum.EasingDirection;
@@ -25,15 +26,20 @@ export interface MotionTweenProps {
 	RepeatDelay?: number;
 	OnStart?: () => void;
 	OnFinished?: () => void;
+	DestroyAfterFinished?: boolean;
+	_hovered?: boolean;
+	_isResetEnabled?: boolean;
+	_resetProps?: ResetProps;
 }
 
-export class MotionTween extends Roact.Component<MotionTweenProps> {
+class MotionTweenInner extends Roact.Component<MotionTweenProps> {
 	private ref: Roact.Ref<Folder> | undefined;
 	private tween?: Tween;
 	private conn?: RBXScriptConnection;
+	private initialValues: Record<string, unknown> | undefined;
 
 	public static defaultProps: Partial<MotionTweenProps> = {
-		Speed: 1,
+		Duration: 1,
 		Looped: false,
 		Easing: Enum.EasingStyle.Sine,
 		EasingDirection: Enum.EasingDirection.InOut,
@@ -43,21 +49,38 @@ export class MotionTween extends Roact.Component<MotionTweenProps> {
 
 	public init() {
 		this.ref = Roact.createRef<Folder>();
+		this.initialValues = {};
 	}
 
 	public didMount() {
 		const folder = this.ref?.getValue();
 		const parent = folder?.Parent;
 
-		if (parent) {
+		if (parent && typeIs(parent, "Instance")) {
+			// Capture initial values for properties in Goal
+			for (const [key] of pairs(this.props.Goal)) {
+				// Safety check: ensure parent is still valid (though it should be)
+				if (parent !== undefined) {
+					const val = (parent as unknown as Record<string, unknown>)[key];
+					if (val !== undefined && this.initialValues !== undefined) {
+						this.initialValues[key] = val;
+					}
+				}
+			}
+
 			this.animate(parent);
 		} else {
-			warn("MotionTween must be a child of an Instance");
+			// warn("MotionTween must be a child of an Instance");
 		}
 	}
 
 	public didUpdate(prevProps: MotionTweenProps) {
-		if (!shallowEqual(this.props.Goal, prevProps.Goal) || !shallowEqual(this.props.From, prevProps.From)) {
+		const propsChanged =
+			!shallowEqual(this.props.Goal, prevProps.Goal) ||
+			!shallowEqual(this.props.From, prevProps.From) ||
+			this.props._hovered !== prevProps._hovered;
+
+		if (propsChanged) {
 			const folder = this.ref?.getValue();
 			const parent = folder?.Parent;
 			if (parent) {
@@ -78,8 +101,22 @@ export class MotionTween extends Roact.Component<MotionTweenProps> {
 	}
 
 	private animate(target: Instance) {
-		const { Goal, From, Speed, Looped, Easing, EasingDirection, Delay, RepeatDelay, OnStart, OnFinished } =
-			this.props;
+		const {
+			Goal,
+			From,
+			Duration,
+			Looped,
+			Easing,
+			EasingDirection,
+			Delay,
+			RepeatDelay,
+			OnStart,
+			OnFinished,
+			DestroyAfterFinished,
+			_hovered,
+			_isResetEnabled,
+			_resetProps,
+		} = this.props;
 
 		if (this.conn) {
 			this.conn.Disconnect();
@@ -89,27 +126,75 @@ export class MotionTween extends Roact.Component<MotionTweenProps> {
 			this.tween.Cancel();
 		}
 
-		// Apply initial values if provided
-		if (From !== undefined) {
+		// Determine Effective Goal and Start handling
+		let effectiveGoal = Goal;
+		let shouldApplyFrom = true;
+
+		let effectiveDuration = Duration!;
+		let effectiveEasing = Easing!;
+		let effectiveEasingDirection = EasingDirection!;
+		let effectiveDelay = Delay;
+
+		// If we are in ResetToBeforeHover mode
+		if (_isResetEnabled && _hovered !== undefined) {
+			if (_hovered) {
+				// Hovering: Goal is target. Apply From if exists.
+				effectiveGoal = Goal;
+				shouldApplyFrom = true;
+			} else {
+				// Not Hovering: Goal is From (or Initial). Do NOT apply From.
+				// We want to tween BACK to the start.
+				// Use From if available, otherwise use captured initial values.
+				if (From !== undefined) {
+					effectiveGoal = From;
+				} else {
+					effectiveGoal = this.initialValues || {};
+				}
+				shouldApplyFrom = false;
+
+				// Overrides for reset animation
+				if (_resetProps !== undefined) {
+					if (_resetProps.Duration !== undefined) effectiveDuration = _resetProps.Duration;
+					if (_resetProps.Easing !== undefined) effectiveEasing = _resetProps.Easing;
+					if (_resetProps.EasingDirection !== undefined)
+						effectiveEasingDirection = _resetProps.EasingDirection;
+					if (_resetProps.Delay !== undefined) effectiveDelay = _resetProps.Delay;
+				}
+			}
+		}
+
+		// Apply initial values if provided and applicable
+		if (shouldApplyFrom && From !== undefined) {
 			for (const [key, value] of pairs(From)) {
 				(target as unknown as Record<string, unknown>)[key] = value;
 			}
 		}
 
 		const tweenInfo = new TweenInfo(
-			Speed!,
-			Easing!,
-			EasingDirection!,
+			effectiveDuration,
+			effectiveEasing,
+			effectiveEasingDirection,
 			Looped ? -1 : 0, // Repeat count (-1 is infinite)
 			Looped, // Reverses
 			RepeatDelay!,
 		);
 
-		this.tween = TweenService.Create(target, tweenInfo, Goal as never);
+		// If effectiveGoal is missing keys (e.g. initialValues empty), this might error or do nothing.
+		// Usually initialValues will be populated in didMount.
+		if (next(effectiveGoal)[0] === undefined) {
+			return; // Nothing to tween
+		}
 
-		if (OnFinished) {
+		this.tween = TweenService.Create(target, tweenInfo, effectiveGoal as never);
+
+		if (OnFinished || DestroyAfterFinished) {
 			this.conn = this.tween.Completed.Connect(() => {
-				OnFinished();
+				if (DestroyAfterFinished && !Looped) {
+					this.ref?.getValue()?.Destroy();
+				}
+				if (OnFinished) {
+					OnFinished();
+				}
 			});
 		}
 
@@ -118,8 +203,8 @@ export class MotionTween extends Roact.Component<MotionTweenProps> {
 			this.tween?.Play();
 		};
 
-		if (Delay !== undefined && Delay > 0) {
-			task.delay(Delay, playTween);
+		if (effectiveDelay !== undefined && effectiveDelay > 0) {
+			task.delay(effectiveDelay, playTween);
 		} else {
 			playTween();
 		}
@@ -130,5 +215,27 @@ export class MotionTween extends Roact.Component<MotionTweenProps> {
 			Name: "MotionTween",
 			[Roact.Ref]: this.ref,
 		});
+	}
+}
+
+// Wrapper component to consume Context
+export class MotionTween extends Roact.Component<MotionTweenProps> {
+	public static defaultProps = MotionTweenInner.defaultProps;
+
+	public render() {
+		return (
+			<HoverContext.Consumer
+				render={(context: HoverContextValue) => {
+					return (
+						<MotionTweenInner
+							{...this.props}
+							_hovered={context.hovered}
+							_isResetEnabled={context.isResetEnabled}
+							_resetProps={context.resetProps}
+						/>
+					);
+				}}
+			/>
+		);
 	}
 }

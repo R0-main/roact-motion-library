@@ -25,7 +25,7 @@ Animates the `Position` property.
 ```tsx
 <frame Position={UDim2.fromScale(0, 0)} Size={UDim2.fromScale(0.1, 0.1)}>
     {/* Slide to the center of the screen over 1 second */}
-    <MotionSlide To={UDim2.fromScale(0.5, 0.5)} Speed={1} Easing={Enum.EasingStyle.Bounce} />
+    <MotionSlide To={UDim2.fromScale(0.5, 0.5)} Duration={1} Easing={Enum.EasingStyle.Bounce} />
 </frame>
 ```
 
@@ -35,10 +35,10 @@ Animates transparency. Defaults to `BackgroundTransparency` but can target other
 ```tsx
 <textlabel Text="Hello">
     {/* Fade text out */}
-    <MotionFade Property="TextTransparency" To={1} Speed={2} />
+    <MotionFade Property="TextTransparency" To={1} Duration={2} />
     
     {/* Fade background out with delay */}
-    <MotionFade Property="BackgroundTransparency" To={1} Speed={2} Delay={0.5} />
+    <MotionFade Property="BackgroundTransparency" To={1} Duration={2} Delay={0.5} />
 </textlabel>
 ```
 
@@ -48,10 +48,10 @@ Animates the `Size`.
 ```tsx
 <imagebutton>
     <OnHover>
-        <MotionScale To={1.1} Speed={0.15} />
+        <MotionScale To={1.1} Duration={0.15} />
     </OnHover>
     <OnHoverEnd>
-        <MotionScale To={1} Speed={0.15} />
+        <MotionScale To={1} Duration={0.15} />
     </OnHoverEnd>
 </imagebutton>
 ```
@@ -62,7 +62,7 @@ Animates the `Rotation`.
 ```tsx
 <imagelabel Image="...">
     {/* Rotate 360 degrees infinitely */}
-    <MotionRotate To={360} Speed={2} Looped={true} />
+    <MotionRotate To={360} Duration={2} Looped={true} />
 </imagelabel>
 ```
 
@@ -72,7 +72,7 @@ Cycles through rainbow colors or animates to a specific color.
 ```tsx
 <frame>
     {/* Rainbow effect on BackgroundColor3 */}
-    <MotionRGB Property="BackgroundColor3" Speed={5} Looped={true} />
+    <MotionRGB Property="BackgroundColor3" Duration={5} Looped={true} />
 </frame>
 ```
 
@@ -82,7 +82,7 @@ Creates a typewriter effect for `TextLabel` or `TextButton`.
 ```tsx
 <textlabel Text="Welcome to the game!">
     {/* Types out text at 0.05s per character */}
-    <MotionTypewriter Speed={0.05} />
+    <MotionTypewriter Duration={0.05} />
 </textlabel>
 ```
 
@@ -92,7 +92,7 @@ Animates a `UIGradient`'s rotation or offset.
 ```tsx
 <frame>
     <uigradient Color={...}>
-        <MotionGradient Rotate={true} Speed={2} />
+        <MotionGradient Rotate={true} Duration={2} />
     </uigradient>
 </frame>
 ```
@@ -102,7 +102,7 @@ The generic component for tweening any property not covered by specific componen
 
 ```tsx
 <uistroke Thickness={1}>
-    <MotionTween Goal={{ Thickness: 5 }} Speed={0.5} Looped={true} />
+    <MotionTween Goal={{ Thickness: 5 }} Duration={0.5} Looped={true} />
 </uistroke>
 ```
 
@@ -117,12 +117,12 @@ Wrappers that trigger their children (motion components) based on mouse interact
 <textbutton Text="Hover Me">
     <OnHover>
         {/* Runs when mouse enters */}
-        <MotionFade Property="BackgroundTransparency" To={0.5} Speed={0.2} />
+        <MotionFade Property="BackgroundTransparency" To={0.5} Duration={0.2} />
     </OnHover>
     
     <OnHoverEnd>
         {/* Runs when mouse leaves */}
-        <MotionFade Property="BackgroundTransparency" To={0} Speed={0.2} />
+        <MotionFade Property="BackgroundTransparency" To={0} Duration={0.2} />
     </OnHoverEnd>
 </textbutton>
 ```

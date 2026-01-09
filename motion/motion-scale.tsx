@@ -1,17 +1,9 @@
 import Roact from "@rbxts/roact";
-import { MotionTween } from "./motion-tween";
+import { MotionTween, MotionTweenProps } from "./motion-tween";
 
-export interface MotionScaleProps {
+export interface MotionScaleProps extends Omit<MotionTweenProps, "Goal" | "From"> {
 	From?: number;
 	To?: number;
-	Speed?: number; // Duration in seconds
-	Looped?: boolean;
-	Easing?: Enum.EasingStyle;
-	EasingDirection?: Enum.EasingDirection;
-	Delay?: number;
-	RepeatDelay?: number;
-	OnStart?: () => void;
-	OnFinished?: () => void;
 }
 
 interface MotionScaleState {
@@ -22,7 +14,7 @@ export class MotionScale extends Roact.Component<MotionScaleProps, MotionScaleSt
 	private ref: Roact.Ref<UIScale> | undefined;
 
 	public static defaultProps: Partial<MotionScaleProps> = {
-		Speed: 1,
+		Duration: 1,
 		Looped: false,
 		Easing: Enum.EasingStyle.Sine,
 		EasingDirection: Enum.EasingDirection.InOut,
@@ -47,7 +39,7 @@ export class MotionScale extends Roact.Component<MotionScaleProps, MotionScaleSt
 	}
 
 	public render() {
-		const { From, To, Speed, Looped, Easing, EasingDirection, Delay, RepeatDelay, OnStart, OnFinished } =
+		const { From, To, Duration, Looped, Easing, EasingDirection, Delay, RepeatDelay, OnStart, OnFinished } =
 			this.props;
 
 		return (
@@ -55,7 +47,7 @@ export class MotionScale extends Roact.Component<MotionScaleProps, MotionScaleSt
 				<MotionTween
 					Goal={{ Scale: To ?? this.state.initialScale }}
 					From={From !== undefined ? { Scale: From } : { Scale: this.state.initialScale }}
-					Speed={Speed}
+					Duration={Duration}
 					Looped={Looped}
 					Easing={Easing}
 					EasingDirection={EasingDirection}

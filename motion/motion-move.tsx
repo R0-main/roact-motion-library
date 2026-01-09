@@ -1,19 +1,20 @@
 import Roact from "@rbxts/roact";
 import { MotionTween, MotionTweenProps } from "./motion-tween";
 
-export interface MotionSlideProps extends Omit<MotionTweenProps, "Goal" | "From"> {
+export interface MotionMoveProps extends Omit<MotionTweenProps, "Goal" | "From"> {
 	From?: UDim2;
 	To: UDim2;
-	Property?: string;
 	Speed?: number;
 }
 
-export interface MotionDirectionProps extends MotionSlideProps {
+export type MotionMovePropsWithoutFromTo = Omit<MotionMoveProps, "From" | "To">;
+
+export interface MotionMoveDirectionProps extends MotionMovePropsWithoutFromTo {
 	Distance?: number;
 }
 
-export class MotionSlide extends Roact.Component<MotionSlideProps> {
-	public static defaultProps: Partial<MotionSlideProps> = {
+export class MotionMove extends Roact.Component<MotionMoveProps> {
+	public static defaultProps: Partial<MotionMoveProps> = {
 		Duration: 1,
 		Looped: false,
 		Easing: Enum.EasingStyle.Sine,
@@ -21,14 +22,12 @@ export class MotionSlide extends Roact.Component<MotionSlideProps> {
 		Delay: 0,
 		RepeatDelay: 0,
 		Speed: 1,
-		Property: "Position",
 	};
 
 	public render() {
 		const {
 			From,
 			To,
-			Property,
 			Speed,
 			Looped,
 			Easing,
@@ -40,13 +39,10 @@ export class MotionSlide extends Roact.Component<MotionSlideProps> {
 			DestroyAfterFinished,
 		} = this.props;
 
-		const goal = { [Property!]: To };
-		const from = From !== undefined ? { [Property!]: From } : undefined;
-
 		return (
 			<MotionTween
-				Goal={goal}
-				From={from}
+				Goal={{ Position: To } as unknown as Record<string, unknown>}
+				From={From !== undefined ? ({ Position: From } as unknown as Record<string, unknown>) : undefined}
 				Duration={Speed}
 				Looped={Looped}
 				Easing={Easing}

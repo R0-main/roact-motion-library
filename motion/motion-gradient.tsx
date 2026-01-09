@@ -1,39 +1,31 @@
 import Roact from "@rbxts/roact";
-import { MotionTween } from "./motion-tween";
+import { MotionTween, MotionTweenProps } from "./motion-tween";
 
-export interface MotionGradientProps {
-	Speed?: number;
+export interface MotionGradientProps extends Omit<MotionTweenProps, "Goal" | "From"> {
 	OffsetSpeed?: number;
 	RotationSpeed?: number;
-
-	// If true, rotates 360 degrees. If number, rotates to that angle.
 	Rotate?: boolean | number;
-
-	// If true, moves offset to (1,0) or specified Vector2.
 	Move?: boolean | Vector2;
-
-	Looped?: boolean;
-	Easing?: Enum.EasingStyle;
-	OnFinished?: () => void;
 }
 
 export class MotionGradient extends Roact.Component<MotionGradientProps> {
 	private ref = Roact.createRef<Folder>();
 
 	public static defaultProps: Partial<MotionGradientProps> = {
-		Speed: 1,
+		...MotionTween.defaultProps,
 		Looped: true,
 		Easing: Enum.EasingStyle.Linear,
 	};
 
 	public render() {
-		const { Speed, OffsetSpeed, RotationSpeed, Rotate, Move, Looped, Easing, OnFinished } = this.props;
+		const { Duration, OffsetSpeed, RotationSpeed, Rotate, Move, Looped, Easing, OnFinished, DestroyAfterFinished } =
+			this.props;
 
 		// Determine goals
 		const goals: Record<string, unknown> = {};
 		const froms: Record<string, unknown> = {};
 
-		let duration = Speed ?? 1;
+		let duration = Duration ?? 1;
 
 		if (Rotate !== undefined) {
 			if (typeIs(Rotate, "boolean") && Rotate === true) {
@@ -64,11 +56,12 @@ export class MotionGradient extends Roact.Component<MotionGradientProps> {
 			<MotionTween
 				Goal={goals}
 				From={hasFroms ? froms : undefined}
-				Speed={duration}
+				Duration={duration}
 				Looped={Looped}
 				Easing={Easing}
 				EasingDirection={Enum.EasingDirection.InOut}
 				OnFinished={OnFinished}
+				DestroyAfterFinished={DestroyAfterFinished}
 			/>
 		);
 	}

@@ -107,7 +107,7 @@ export class HoverFrame extends Roact.Component<HoverFrameProps, HoverFrameState
 							>
 								<MotionFade
 									To={hovered ? 0 : 1}
-									Speed={FadeTime}
+									Duration={FadeTime}
 									Property="GroupTransparency"
 									OnFinished={() => {
 										if (!this.state.hovered) {
