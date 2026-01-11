@@ -13,3 +13,4 @@ export * from "./motion-lighten";
 export * from "./motion-typewriter";
 export * from "./motion-gradient";
 export * from "./motion-rgb-gradient";
+export * from "./scaling";
