@@ -1,32 +1,55 @@
 import Roact from "@rbxts/roact";
-import { MotionGradient } from "./motion-gradient";
+import { RunService } from "@rbxts/services";
 
 export interface MotionRgbGradientProps {
-	Duration?: number;
-	RotationSpeed?: number;
-	Looped?: boolean;
+	Speed?: number;
+	Direction?: "Left" | "Right";
+	Rotation?: number;
 }
 
 export class MotionRgbGradient extends Roact.Component<MotionRgbGradientProps> {
-	render() {
-		const { Duration, RotationSpeed, Looped = true } = this.props;
+	public static defaultProps: Partial<MotionRgbGradientProps> = {
+		Speed: 0.5,
+		Direction: "Right",
+		Rotation: 0,
+	};
 
-		return (
-			<uigradient
-				Color={
-					new ColorSequence([
-						new ColorSequenceKeypoint(0, Color3.fromRGB(255, 0, 0)),
-						new ColorSequenceKeypoint(0.166, Color3.fromRGB(255, 255, 0)),
-						new ColorSequenceKeypoint(0.333, Color3.fromRGB(0, 255, 0)),
-						new ColorSequenceKeypoint(0.5, Color3.fromRGB(0, 255, 255)),
-						new ColorSequenceKeypoint(0.666, Color3.fromRGB(0, 0, 255)),
-						new ColorSequenceKeypoint(0.833, Color3.fromRGB(255, 0, 255)),
-						new ColorSequenceKeypoint(1, Color3.fromRGB(255, 0, 0)),
-					])
-				}
-			>
-				<MotionGradient Duration={Duration} RotationSpeed={RotationSpeed} Looped={Looped} Rotate={true} />
-			</uigradient>
-		);
+	private colorBinding: Roact.Binding<ColorSequence> | undefined;
+	private updateColor?: (newValue: ColorSequence) => void;
+	private connection?: RBXScriptConnection;
+
+	init(props: MotionRgbGradientProps) {
+		[this.colorBinding, this.updateColor] = Roact.createBinding(new ColorSequence(Color3.fromRGB(255, 0, 0)));
+	}
+
+	public didMount() {
+		this.connection = RunService.Heartbeat.Connect(() => {
+			const { Speed, Direction } = this.props;
+			const speedVal = Speed ?? 0.5;
+			const time = os.clock();
+
+			const dirMultiplier = Direction === "Left" ? 1 : -1;
+			const offset = time * speedVal * dirMultiplier;
+
+			const keypoints: ColorSequenceKeypoint[] = [];
+
+			for (let i = 0; i <= 6; i++) {
+				const t = i / 6;
+				let hue = (t + offset) % 1;
+				if (hue < 0) hue += 1;
+
+				keypoints.push(new ColorSequenceKeypoint(t, Color3.fromHSV(hue, 1, 1)));
+			}
+
+			this.updateColor?.(new ColorSequence(keypoints));
+		});
+	}
+
+	public willUnmount() {
+		this.connection?.Disconnect();
+	}
+
+	public render() {
+		return <uigradient Color={this.colorBinding} Rotation={this.props.Rotation} />;
 	}
 }
