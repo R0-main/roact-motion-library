@@ -1,4 +1,4 @@
-import Roact from "@rbxts/roact";
+import React from "@rbxts/react";
 import { RunService } from "@rbxts/services";
 
 export interface MotionRGBProps {
@@ -14,81 +14,71 @@ export interface MotionRGBProps {
 	DestroyAfterFinished?: boolean;
 }
 
-export class MotionRGB extends Roact.Component<MotionRGBProps> {
-	private ref: Roact.Ref<Folder> | undefined;
-	private conn?: RBXScriptConnection;
-	private stopTask?: thread;
+const defaultProps: Partial<MotionRGBProps> = {
+	Duration: 5,
+	Looped: true,
+	Saturation: 1,
+	Value: 1,
+	Property: "BackgroundColor3",
+	Seed: 0,
+};
 
-	public static defaultProps: Partial<MotionRGBProps> = {
-		Duration: 5,
-		Looped: true,
-		Saturation: 1,
-		Value: 1,
-		Property: "BackgroundColor3",
-		Seed: 0,
-	};
+export function MotionRGB(props: MotionRGBProps) {
+	const ref = React.useRef<Folder>();
+	const connRef = React.useRef<RBXScriptConnection>();
+	const stopTaskRef = React.useRef<thread>();
 
-	public init() {
-		this.ref = Roact.createRef<Folder>();
-	}
-
-	public didMount() {
-		const folder = this.ref?.getValue();
-		const parent = folder?.Parent;
-
-		if (parent) {
-			this.animate(parent);
-		} else {
-			warn("MotionRGB must be a child of an Instance");
+	function stopAnimation() {
+		if (connRef.current) {
+			connRef.current.Disconnect();
+			connRef.current = undefined;
+		}
+		if (stopTaskRef.current) {
+			task.cancel(stopTaskRef.current);
+			stopTaskRef.current = undefined;
 		}
 	}
 
-	public willUnmount() {
-		this.stopAnimation();
-	}
+	function animate(target: Instance) {
+		const {
+			Duration = defaultProps.Duration!,
+			Looped = defaultProps.Looped!,
+			Saturation = defaultProps.Saturation!,
+			Value = defaultProps.Value!,
+			Property = defaultProps.Property!,
+			Seed = defaultProps.Seed!,
+			OnStart,
+			OnFinished,
+			DestroyAfterFinished,
+		} = props;
 
-	private stopAnimation() {
-		if (this.conn) {
-			this.conn.Disconnect();
-			this.conn = undefined;
-		}
-		if (this.stopTask) {
-			task.cancel(this.stopTask);
-			this.stopTask = undefined;
-		}
-	}
-
-	private animate(target: Instance) {
-		const { Duration, Looped, Saturation, Value, Property, Seed, OnStart, OnFinished, DestroyAfterFinished } =
-			this.props;
-
-		this.stopAnimation();
+		stopAnimation();
 
 		if (OnStart) {
 			OnStart();
 		}
 
-		const cycleTime = Duration ?? 5;
-		const s = Saturation ?? 1;
-		const v = Value ?? 1;
-		const prop = Property ?? "BackgroundColor3";
-		const seedOffset = Seed ?? 0;
+		const cycleTime = Duration;
+		const s = Saturation;
+		const v = Value;
+		const prop = Property;
+		const seedOffset = Seed;
 
 		// Use RenderStepped on client, Heartbeat on server
 		const event = RunService.IsClient() ? RunService.RenderStepped : RunService.Heartbeat;
 
-		this.conn = event.Connect(() => {
+		connRef.current = event.Connect(() => {
 			const hue = ((tick() + seedOffset) % cycleTime) / cycleTime;
 			const color = Color3.fromHSV(hue, s, v);
 			(target as unknown as Record<string, unknown>)[prop] = color;
 		});
 
 		if (!Looped && Duration !== undefined && Duration > 0) {
-			this.stopTask = task.delay(Duration, () => {
-				this.stopTask = undefined;
-				this.stopAnimation();
+			stopTaskRef.current = task.delay(Duration, () => {
+				stopTaskRef.current = undefined;
+				stopAnimation();
 				if (DestroyAfterFinished) {
-					this.ref?.getValue()?.Destroy();
+					ref.current?.Destroy();
 				}
 				if (OnFinished) {
 					OnFinished();
@@ -97,10 +87,26 @@ export class MotionRGB extends Roact.Component<MotionRGBProps> {
 		}
 	}
 
-	public render() {
-		return Roact.createElement("Folder", {
-			Name: "MotionRGB",
-			[Roact.Ref]: this.ref,
-		});
-	}
+	React.useEffect(() => {
+		const folder = ref.current;
+		const parent = folder?.Parent;
+
+		if (parent) {
+			animate(parent);
+		} else {
+			warn("MotionRGB must be a child of an Instance");
+		}
+
+		return () => {
+			stopAnimation();
+		};
+	}, [props.Duration, props.Looped, props.Saturation, props.Value, props.Property, props.Seed]);
+
+	React.useEffect(() => {
+		if (ref.current) {
+			ref.current.Name = "MotionRGB";
+		}
+	}, []);
+
+	return <folder ref={ref} />;
 }

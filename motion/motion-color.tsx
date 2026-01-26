@@ -1,4 +1,4 @@
-import Roact from "@rbxts/roact";
+import React from "@rbxts/react";
 import { MotionTween, MotionTweenProps } from "./motion-tween";
 
 export interface MotionColorProps extends Omit<MotionTweenProps, "Goal" | "From"> {
@@ -14,25 +14,31 @@ export interface MotionColorProps extends Omit<MotionTweenProps, "Goal" | "From"
 		| "ScrollBarThickness";
 }
 
-export class MotionColor extends Roact.Component<MotionColorProps> {
-	public static defaultProps: Partial<MotionColorProps> = {
-		Duration: 1,
-		Looped: false,
-		Easing: Enum.EasingStyle.Sine,
-		EasingDirection: Enum.EasingDirection.InOut,
-		Delay: 0,
-		RepeatDelay: 0,
-	};
+const defaultProps: Partial<MotionColorProps> = {
+	Duration: 1,
+	Looped: false,
+	Easing: Enum.EasingStyle.Sine,
+	EasingDirection: Enum.EasingDirection.InOut,
+	Delay: 0,
+	RepeatDelay: 0,
+};
 
-	public render() {
-		const { From, To, Property } = this.props;
+export function MotionColor(props: MotionColorProps) {
+	const { From, To, Property, Duration, Looped, Easing, EasingDirection, Delay, RepeatDelay, OnStart, OnFinished, DestroyAfterFinished } = props;
 
-		return (
-			<MotionTween
-				{...this.props}
-				Goal={{ [Property!]: To }}
-				From={From !== undefined ? { [Property!]: From } : undefined}
-			/>
-		);
-	}
+	return (
+		<MotionTween
+			Duration={Duration ?? defaultProps.Duration}
+			Looped={Looped ?? defaultProps.Looped}
+			Easing={Easing ?? defaultProps.Easing}
+			EasingDirection={EasingDirection ?? defaultProps.EasingDirection}
+			Delay={Delay ?? defaultProps.Delay}
+			RepeatDelay={RepeatDelay ?? defaultProps.RepeatDelay}
+			OnStart={OnStart}
+			OnFinished={OnFinished}
+			DestroyAfterFinished={DestroyAfterFinished}
+			Goal={{ [Property!]: To }}
+			From={From !== undefined ? { [Property!]: From } : undefined}
+		/>
+	);
 }

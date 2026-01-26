@@ -1,4 +1,4 @@
-import Roact from "@rbxts/roact";
+import React from "@rbxts/react";
 import { MotionColor, MotionColorProps } from "./motion-color";
 
 export interface MotionLightenProps extends Omit<MotionColorProps, "To" | "From"> {
@@ -10,57 +10,70 @@ interface MotionLightenState {
 	targetColor: Color3;
 }
 
-export class MotionLighten extends Roact.Component<MotionLightenProps, MotionLightenState> {
-	private ref: Roact.Ref<Folder> | undefined;
+const defaultProps: Partial<MotionLightenProps> = {
+	Duration: 0.2,
+	Looped: false,
+	Easing: Enum.EasingStyle.Sine,
+	EasingDirection: Enum.EasingDirection.InOut,
+	Delay: 0,
+	RepeatDelay: 0,
+	Factor: 0.2,
+};
 
-	public static defaultProps: Partial<MotionLightenProps> = {
-		...MotionColor.defaultProps,
-		Factor: 0.2,
-		Duration: 0.2,
-	};
+export function MotionLighten(props: MotionLightenProps) {
+	const ref = React.useRef<Folder>();
+	const [state, setState] = React.useState<MotionLightenState>({
+		initialColor: new Color3(1, 1, 1),
+		targetColor: new Color3(1, 1, 1),
+	});
 
-	public init() {
-		this.ref = Roact.createRef<Folder>();
-		this.setState({
-			initialColor: new Color3(1, 1, 1),
-			targetColor: new Color3(1, 1, 1),
-		});
-	}
-
-	public didMount() {
-		const folder = this.ref?.getValue();
+	React.useEffect(() => {
+		const folder = ref.current;
 		const parent = folder?.Parent;
 
 		if (parent) {
-			const prop = this.props.Property ?? "BackgroundColor3";
+			const prop = props.Property ?? "BackgroundColor3";
 			const initial = (parent as unknown as Record<string, Color3>)[prop];
 
 			if (typeIs(initial, "Color3")) {
-				const factor = this.props.Factor ?? 0.2;
+				const factor = props.Factor ?? 0.2;
 				// Lerp towards White
 				const target = initial.Lerp(new Color3(1, 1, 1), factor);
 
-				this.setState({
+				setState({
 					initialColor: initial,
 					targetColor: target,
 				});
 			}
 		}
-	}
+	}, [props.Property, props.Factor]);
 
-	public render() {
-		const motionProps = this.props;
+	const { initialColor, targetColor } = state;
+	const { Factor, Property, Duration, Looped, Easing, EasingDirection, Delay, RepeatDelay, OnStart, OnFinished, DestroyAfterFinished } = props;
 
-		const { initialColor, targetColor } = this.state;
+	React.useEffect(() => {
+		if (ref.current) {
+			ref.current.Name = "MotionLightenReference";
+		}
+	}, []);
 
-		return (
-			<>
-				{Roact.createElement("Folder", {
-					[Roact.Ref]: this.ref,
-					Name: "MotionLightenReference",
-				})}
-				<MotionColor {...motionProps} To={targetColor} From={initialColor} />
-			</>
-		);
-	}
+	return (
+		<>
+			<folder ref={ref} />
+			<MotionColor
+				Property={Property}
+				Duration={Duration}
+				Looped={Looped}
+				Easing={Easing}
+				EasingDirection={EasingDirection}
+				Delay={Delay}
+				RepeatDelay={RepeatDelay}
+				OnStart={OnStart}
+				OnFinished={OnFinished}
+				DestroyAfterFinished={DestroyAfterFinished}
+				To={targetColor}
+				From={initialColor}
+			/>
+		</>
+	);
 }

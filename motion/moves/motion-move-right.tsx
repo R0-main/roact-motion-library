@@ -1,17 +1,35 @@
-import Roact from "@rbxts/roact";
+import React from "@rbxts/react";
 import { MotionMove, MotionMoveDirectionProps } from "../motion-move";
 
-export class MotionMoveRight extends Roact.Component<MotionMoveDirectionProps> {
-	public static defaultProps: Partial<MotionMoveDirectionProps> = {
-		...MotionMove.defaultProps,
-		Distance: 1,
-	};
+const defaultProps: Partial<MotionMoveDirectionProps> = {
+	Duration: 1,
+	Looped: false,
+	Easing: Enum.EasingStyle.Sine,
+	EasingDirection: Enum.EasingDirection.InOut,
+	Delay: 0,
+	RepeatDelay: 0,
+	Speed: 1,
+	Distance: 1,
+};
 
-	public render() {
-		const { Distance } = this.props;
-		const dist = Distance ?? 1;
-		const defaultFrom = UDim2.fromScale(dist, 0);
+export function MotionMoveRight(props: MotionMoveDirectionProps) {
+	const { Distance = defaultProps.Distance!, Speed, Duration, Looped, Easing, EasingDirection, Delay, RepeatDelay, OnStart, OnFinished, DestroyAfterFinished } = props;
+	const dist = Distance;
+	const defaultFrom = UDim2.fromScale(dist, 0);
 
-		return <MotionMove {...(this.props as unknown as MotionMoveDirectionProps)} To={defaultFrom} />;
-	}
+	return (
+		<MotionMove
+			Speed={Speed}
+			Duration={Duration}
+			Looped={Looped}
+			Easing={Easing}
+			EasingDirection={EasingDirection}
+			Delay={Delay}
+			RepeatDelay={RepeatDelay}
+			OnStart={OnStart}
+			OnFinished={OnFinished}
+			DestroyAfterFinished={DestroyAfterFinished}
+			To={defaultFrom}
+		/>
+	);
 }

@@ -1,6 +1,6 @@
-import Roact from "@rbxts/roact";
+import React from "@rbxts/react";
 import { TweenService } from "@rbxts/services";
-import { HoverContext, ResetProps, HoverContextValue } from "../hover-context";
+import { HoverContext, ResetProps } from "../hover-context";
 
 function shallowEqual(a: Record<string, unknown> | undefined, b: Record<string, unknown> | undefined) {
 	if (a === b) return true;
@@ -32,107 +32,114 @@ export interface MotionTweenProps {
 	_resetProps?: ResetProps;
 }
 
-class MotionTweenInner extends Roact.Component<MotionTweenProps> {
-	private ref: Roact.Ref<Folder> | undefined;
-	private tween?: Tween;
-	private conn?: RBXScriptConnection;
-	private initialValues: Record<string, unknown> | undefined;
+const defaultProps: Partial<MotionTweenProps> = {
+	Duration: 1,
+	Looped: false,
+	Easing: Enum.EasingStyle.Sine,
+	EasingDirection: Enum.EasingDirection.InOut,
+	Delay: 0,
+	RepeatDelay: 0,
+};
 
-	public static defaultProps: Partial<MotionTweenProps> = {
-		Duration: 1,
-		Looped: false,
-		Easing: Enum.EasingStyle.Sine,
-		EasingDirection: Enum.EasingDirection.InOut,
-		Delay: 0,
-		RepeatDelay: 0,
-	};
+function MotionTweenInner(props: MotionTweenProps) {
+	const {
+		Goal,
+		From,
+		Duration = defaultProps.Duration!,
+		Looped = defaultProps.Looped!,
+		Easing = defaultProps.Easing!,
+		EasingDirection = defaultProps.EasingDirection!,
+		Delay = defaultProps.Delay!,
+		RepeatDelay = defaultProps.RepeatDelay!,
+		OnStart,
+		OnFinished,
+		DestroyAfterFinished,
+		_hovered,
+		_isResetEnabled,
+		_resetProps,
+	} = props;
 
-	public init() {
-		this.ref = Roact.createRef<Folder>();
-		this.initialValues = {};
-	}
+	const ref = React.useRef<Folder>();
+	const tweenRef = React.useRef<Tween>();
+	const connRef = React.useRef<RBXScriptConnection>();
+	const initialValuesRef = React.useRef<Record<string, unknown>>({});
+	const prevPropsRef = React.useRef<MotionTweenProps>();
 
-	public didMount() {
-		const folder = this.ref?.getValue();
+	React.useEffect(() => {
+		const folder = ref.current;
 		const parent = folder?.Parent;
 
 		if (parent && typeIs(parent, "Instance")) {
 			// Capture initial values for properties in Goal
-			for (const [key] of pairs(this.props.Goal)) {
+			for (const [key] of pairs(Goal)) {
 				// Safety check: ensure parent is still valid (though it should be)
 				if (parent !== undefined) {
 					const val = (parent as unknown as Record<string, unknown>)[key];
-					if (val !== undefined && this.initialValues !== undefined) {
-						this.initialValues[key] = val;
+					if (val !== undefined && initialValuesRef.current !== undefined) {
+						initialValuesRef.current[key] = val;
 					}
 				}
 			}
 
-			this.animate(parent);
+			animate(parent);
 		} else {
 			// warn("MotionTween must be a child of an Instance");
 		}
-	}
+	}, []);
 
-	public didUpdate(prevProps: MotionTweenProps) {
+	React.useEffect(() => {
+		const folder = ref.current;
+		const parent = folder?.Parent;
+
+		if (!parent) return;
+
+		const prevProps = prevPropsRef.current;
+		if (!prevProps) {
+			prevPropsRef.current = props;
+			return;
+		}
+
 		const propsChanged =
-			!shallowEqual(this.props.Goal, prevProps.Goal) ||
-			!shallowEqual(this.props.From, prevProps.From) ||
-			this.props._hovered !== prevProps._hovered;
+			!shallowEqual(Goal, prevProps.Goal) ||
+			!shallowEqual(From, prevProps.From) ||
+			_hovered !== prevProps._hovered;
 
 		if (propsChanged) {
-			const folder = this.ref?.getValue();
-			const parent = folder?.Parent;
-			if (parent) {
-				this.animate(parent);
+			animate(parent);
+		}
+
+		prevPropsRef.current = props;
+	}, [Goal, From, _hovered]);
+
+	React.useEffect(() => {
+		return () => {
+			if (connRef.current) {
+				connRef.current.Disconnect();
+				connRef.current = undefined;
 			}
-		}
-	}
+			if (tweenRef.current) {
+				tweenRef.current.Cancel();
+				tweenRef.current = undefined;
+			}
+		};
+	}, []);
 
-	public willUnmount() {
-		if (this.conn) {
-			this.conn.Disconnect();
-			this.conn = undefined;
+	function animate(target: Instance) {
+		if (connRef.current) {
+			connRef.current.Disconnect();
+			connRef.current = undefined;
 		}
-		if (this.tween) {
-			this.tween.Cancel();
-			this.tween = undefined;
-		}
-	}
-
-	private animate(target: Instance) {
-		const {
-			Goal,
-			From,
-			Duration,
-			Looped,
-			Easing,
-			EasingDirection,
-			Delay,
-			RepeatDelay,
-			OnStart,
-			OnFinished,
-			DestroyAfterFinished,
-			_hovered,
-			_isResetEnabled,
-			_resetProps,
-		} = this.props;
-
-		if (this.conn) {
-			this.conn.Disconnect();
-			this.conn = undefined;
-		}
-		if (this.tween) {
-			this.tween.Cancel();
+		if (tweenRef.current) {
+			tweenRef.current.Cancel();
 		}
 
 		// Determine Effective Goal and Start handling
 		let effectiveGoal = Goal;
 		let shouldApplyFrom = true;
 
-		let effectiveDuration = Duration!;
-		let effectiveEasing = Easing!;
-		let effectiveEasingDirection = EasingDirection!;
+		let effectiveDuration = Duration;
+		let effectiveEasing = Easing;
+		let effectiveEasingDirection = EasingDirection;
 		let effectiveDelay = Delay;
 
 		// If we are in ResetToBeforeHover mode
@@ -148,7 +155,7 @@ class MotionTweenInner extends Roact.Component<MotionTweenProps> {
 				if (From !== undefined) {
 					effectiveGoal = From;
 				} else {
-					effectiveGoal = this.initialValues || {};
+					effectiveGoal = initialValuesRef.current || {};
 				}
 				shouldApplyFrom = false;
 
@@ -176,7 +183,7 @@ class MotionTweenInner extends Roact.Component<MotionTweenProps> {
 			effectiveEasingDirection,
 			Looped ? -1 : 0, // Repeat count (-1 is infinite)
 			Looped, // Reverses
-			RepeatDelay!,
+			RepeatDelay,
 		);
 
 		// If effectiveGoal is missing keys (e.g. initialValues empty), this might error or do nothing.
@@ -185,12 +192,12 @@ class MotionTweenInner extends Roact.Component<MotionTweenProps> {
 			return; // Nothing to tween
 		}
 
-		this.tween = TweenService.Create(target, tweenInfo, effectiveGoal as never);
+		tweenRef.current = TweenService.Create(target, tweenInfo, effectiveGoal as never);
 
 		if (OnFinished || DestroyAfterFinished) {
-			this.conn = this.tween.Completed.Connect(() => {
+			connRef.current = tweenRef.current.Completed.Connect(() => {
 				if (DestroyAfterFinished && !Looped) {
-					this.ref?.getValue()?.Destroy();
+					ref.current?.Destroy();
 				}
 				if (OnFinished) {
 					OnFinished();
@@ -200,7 +207,7 @@ class MotionTweenInner extends Roact.Component<MotionTweenProps> {
 
 		const playTween = () => {
 			if (OnStart) OnStart();
-			this.tween?.Play();
+			tweenRef.current?.Play();
 		};
 
 		if (effectiveDelay !== undefined && effectiveDelay > 0) {
@@ -210,32 +217,36 @@ class MotionTweenInner extends Roact.Component<MotionTweenProps> {
 		}
 	}
 
-	public render() {
-		return Roact.createElement("Folder", {
-			Name: "MotionTween",
-			[Roact.Ref]: this.ref,
-		});
-	}
+	React.useEffect(() => {
+		if (ref.current) {
+			ref.current.Name = "MotionTween";
+		}
+	}, []);
+
+	return <folder ref={ref} />;
 }
 
 // Wrapper component to consume Context
-export class MotionTween extends Roact.Component<MotionTweenProps> {
-	public static defaultProps = MotionTweenInner.defaultProps;
+export function MotionTween(props: MotionTweenProps) {
+	const context = React.useContext(HoverContext);
+	const { Goal, From, Duration, Looped, Easing, EasingDirection, Delay, RepeatDelay, OnStart, OnFinished, DestroyAfterFinished } = props;
 
-	public render() {
-		return (
-			<HoverContext.Consumer
-				render={(context: HoverContextValue) => {
-					return (
-						<MotionTweenInner
-							{...this.props}
-							_hovered={context.hovered}
-							_isResetEnabled={context.isResetEnabled}
-							_resetProps={context.resetProps}
-						/>
-					);
-				}}
-			/>
-		);
-	}
+	return (
+		<MotionTweenInner
+			Goal={Goal}
+			From={From}
+			Duration={Duration}
+			Looped={Looped}
+			Easing={Easing}
+			EasingDirection={EasingDirection}
+			Delay={Delay}
+			RepeatDelay={RepeatDelay}
+			OnStart={OnStart}
+			OnFinished={OnFinished}
+			DestroyAfterFinished={DestroyAfterFinished}
+			_hovered={context.hovered}
+			_isResetEnabled={context.isResetEnabled}
+			_resetProps={context.resetProps}
+		/>
+	);
 }

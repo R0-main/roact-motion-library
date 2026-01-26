@@ -1,4 +1,4 @@
-import Roact from "@rbxts/roact";
+import React from "@rbxts/react";
 import { RunService } from "@rbxts/services";
 
 export interface MotionRgbGradientProps {
@@ -7,25 +7,20 @@ export interface MotionRgbGradientProps {
 	Rotation?: number;
 }
 
-export class MotionRgbGradient extends Roact.Component<MotionRgbGradientProps> {
-	public static defaultProps: Partial<MotionRgbGradientProps> = {
-		Speed: 0.5,
-		Direction: "Right",
-		Rotation: 0,
-	};
+const defaultProps: Partial<MotionRgbGradientProps> = {
+	Speed: 0.5,
+	Direction: "Right",
+	Rotation: 0,
+};
 
-	private colorBinding: Roact.Binding<ColorSequence> | undefined;
-	private updateColor?: (newValue: ColorSequence) => void;
-	private connection?: RBXScriptConnection;
+export function MotionRgbGradient(props: MotionRgbGradientProps) {
+	const { Speed = defaultProps.Speed!, Direction = defaultProps.Direction!, Rotation = defaultProps.Rotation } = props;
+	const [colorBinding, setColorBinding] = React.useBinding(new ColorSequence(Color3.fromRGB(255, 0, 0)));
+	const connectionRef = React.useRef<RBXScriptConnection>();
 
-	init(props: MotionRgbGradientProps) {
-		[this.colorBinding, this.updateColor] = Roact.createBinding(new ColorSequence(Color3.fromRGB(255, 0, 0)));
-	}
-
-	public didMount() {
-		this.connection = RunService.Heartbeat.Connect(() => {
-			const { Speed, Direction } = this.props;
-			const speedVal = Speed ?? 0.5;
+	React.useEffect(() => {
+		connectionRef.current = RunService.Heartbeat.Connect(() => {
+			const speedVal = Speed;
 			const time = os.clock();
 
 			const dirMultiplier = Direction === "Left" ? 1 : -1;
@@ -41,15 +36,13 @@ export class MotionRgbGradient extends Roact.Component<MotionRgbGradientProps> {
 				keypoints.push(new ColorSequenceKeypoint(t, Color3.fromHSV(hue, 1, 1)));
 			}
 
-			this.updateColor?.(new ColorSequence(keypoints));
+			setColorBinding(new ColorSequence(keypoints));
 		});
-	}
 
-	public willUnmount() {
-		this.connection?.Disconnect();
-	}
+		return () => {
+			connectionRef.current?.Disconnect();
+		};
+	}, [Speed, Direction]);
 
-	public render() {
-		return <uigradient Color={this.colorBinding} Rotation={this.props.Rotation} />;
-	}
+	return <uigradient Color={colorBinding} Rotation={Rotation} />;
 }

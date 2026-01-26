@@ -1,4 +1,4 @@
-import Roact from "@rbxts/roact";
+import React from "@rbxts/react";
 
 export interface ResetProps {
 	Duration?: number;
@@ -13,7 +13,7 @@ export interface HoverContextValue {
 	resetProps?: ResetProps;
 }
 
-export const HoverContext = Roact.createContext<HoverContextValue>({
+export const HoverContext = React.createContext<HoverContextValue>({
 	hovered: undefined,
 	isResetEnabled: false,
 	resetProps: undefined,

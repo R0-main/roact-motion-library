@@ -1,4 +1,4 @@
-import Roact from "@rbxts/roact";
+import React from "@rbxts/react";
 import { MotionTween, MotionTweenProps } from "./motion-tween";
 
 export interface MotionFadeProps extends Omit<MotionTweenProps, "Goal" | "From"> {
@@ -15,42 +15,45 @@ export interface MotionFadeProps extends Omit<MotionTweenProps, "Goal" | "From">
 		| "SelectionImageTransparency";
 }
 
-export class MotionFade extends Roact.Component<MotionFadeProps> {
-	public static defaultProps: Partial<MotionFadeProps> = {
-		...(MotionTween.defaultProps as Partial<MotionFadeProps>),
-		Property: "BackgroundTransparency",
-	};
+const defaultProps: Partial<MotionFadeProps> = {
+	Duration: 1,
+	Looped: false,
+	Easing: Enum.EasingStyle.Sine,
+	EasingDirection: Enum.EasingDirection.InOut,
+	Delay: 0,
+	RepeatDelay: 0,
+	Property: "BackgroundTransparency",
+};
 
-	public render() {
-		const {
-			From,
-			To,
-			Duration,
-			Looped,
-			Easing,
-			EasingDirection,
-			Delay,
-			RepeatDelay,
-			OnStart,
-			OnFinished,
-			Property,
-			DestroyAfterFinished,
-		} = this.props;
+export function MotionFade(props: MotionFadeProps) {
+	const {
+		From,
+		To,
+		Duration = defaultProps.Duration,
+		Looped = defaultProps.Looped,
+		Easing = defaultProps.Easing,
+		EasingDirection = defaultProps.EasingDirection,
+		Delay = defaultProps.Delay,
+		RepeatDelay = defaultProps.RepeatDelay,
+		OnStart,
+		OnFinished,
+		Property = defaultProps.Property!,
+		DestroyAfterFinished,
+	} = props;
 
-		return (
-			<MotionTween
-				Goal={{ [Property!]: To }}
-				From={From !== undefined ? { [Property!]: From } : undefined}
-				Duration={Duration}
-				Looped={Looped}
-				Easing={Easing}
-				EasingDirection={EasingDirection}
-				Delay={Delay}
-				RepeatDelay={RepeatDelay}
-				OnStart={OnStart}
-				OnFinished={OnFinished}
-				DestroyAfterFinished={DestroyAfterFinished}
-			/>
-		);
-	}
+	return (
+		<MotionTween
+			Goal={{ [Property]: To }}
+			From={From !== undefined ? { [Property]: From } : undefined}
+			Duration={Duration}
+			Looped={Looped}
+			Easing={Easing}
+			EasingDirection={EasingDirection}
+			Delay={Delay}
+			RepeatDelay={RepeatDelay}
+			OnStart={OnStart}
+			OnFinished={OnFinished}
+			DestroyAfterFinished={DestroyAfterFinished}
+		/>
+	);
 }

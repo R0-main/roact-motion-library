@@ -1,6 +1,7 @@
-import Roact from "@rbxts/roact";
+import React from "@rbxts/react";
+import { createPortal } from "@rbxts/react-roblox";
 import { SoundService } from "@rbxts/services";
-import { HoverContext, HoverContextValue } from "./hover-context";
+import { HoverContext } from "./hover-context";
 
 interface SoundProps {
 	Id: string | number;
@@ -17,62 +18,69 @@ interface SoundProps {
 	At?: Instance;
 }
 
-class SoundComponent extends Roact.Component<SoundProps> {
-	public static defaultProps = {
-		Volume: 0.5,
-		PlaybackSpeed: 1,
-		Looped: false,
-	};
+const defaultProps = {
+	Volume: 0.5,
+	PlaybackSpeed: 1,
+	Looped: false,
+};
 
-	public render() {
-		// print("Rendering Sound Component");
-		const props = this.props;
-		const { Id, OnFinished } = props;
+export function Sound(props: SoundProps) {
+	// print("Rendering Sound Component");
+	const {
+		Id,
+		Volume = defaultProps.Volume,
+		PlaybackSpeed = defaultProps.PlaybackSpeed,
+		Looped = defaultProps.Looped,
+		TimePosition,
+		RollOffMaxDistance,
+		RollOffMinDistance,
+		RollOffMode,
+		SoundGroup,
+		PlayOnRemove,
+		OnFinished,
+		At,
+	} = props;
 
-		let finalId: string;
-		if (typeIs(Id, "number")) {
+	const context = React.useContext(HoverContext);
+	const { hovered } = context;
+	const shouldPlay = hovered ?? true;
+
+	let finalId: string;
+	if (typeIs(Id, "number")) {
+		finalId = `rbxassetid://${Id}`;
+	} else if (typeIs(Id, "string")) {
+		// Check if it's purely a number string and doesn't already have a protocol
+		if (tonumber(Id) !== undefined && Id.find("://")[0] === undefined) {
 			finalId = `rbxassetid://${Id}`;
-		} else if (typeIs(Id, "string")) {
-			// Check if it's purely a number string and doesn't already have a protocol
-			if (tonumber(Id) !== undefined && Id.find("://")[0] === undefined) {
-				finalId = `rbxassetid://${Id}`;
-			} else {
-				finalId = Id;
-			}
 		} else {
-			finalId = tostring(Id);
+			finalId = Id;
 		}
-
-		return (
-			<HoverContext.Consumer
-				render={(contextValue: HoverContextValue) => {
-					const { hovered } = contextValue;
-					const shouldPlay = hovered ?? true;
-
-					const soundElement = Roact.createElement("Sound", {
-						SoundId: finalId,
-						Playing: shouldPlay,
-						Volume: props.Volume,
-						PlaybackSpeed: props.PlaybackSpeed,
-						Looped: props.Looped,
-						TimePosition: props.TimePosition,
-						RollOffMaxDistance: props.RollOffMaxDistance,
-						RollOffMinDistance: props.RollOffMinDistance,
-						RollOffMode: props.RollOffMode,
-						SoundGroup: props.SoundGroup,
-						PlayOnRemove: props.PlayOnRemove,
-						[Roact.Event.Ended]: () => {
-							if (OnFinished) {
-								OnFinished();
-							}
-						},
-					});
-
-					return <Roact.Portal target={props.At ?? SoundService}>{soundElement}</Roact.Portal>;
-				}}
-			/>
-		);
+	} else {
+		finalId = tostring(Id);
 	}
-}
 
-export { SoundComponent as Sound };
+	const soundElement = (
+		<sound
+			SoundId={finalId}
+			Playing={shouldPlay}
+			Volume={Volume}
+			PlaybackSpeed={PlaybackSpeed}
+			Looped={Looped}
+			TimePosition={TimePosition}
+			RollOffMaxDistance={RollOffMaxDistance}
+			RollOffMinDistance={RollOffMinDistance}
+			RollOffMode={RollOffMode}
+			SoundGroup={SoundGroup}
+			PlayOnRemove={PlayOnRemove}
+			Event={{
+				Ended: () => {
+					if (OnFinished) {
+						OnFinished();
+					}
+				},
+			}}
+		/>
+	);
+
+	return createPortal(soundElement, At ?? SoundService);
+}

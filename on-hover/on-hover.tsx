@@ -1,7 +1,17 @@
-import { HoverBase } from "./hover-base";
+import React from "@rbxts/react";
+import { HoverBase, OnHoverProps } from "./hover-base";
 
-export class OnHover extends HoverBase {
-	protected shouldRender(hovered: boolean) {
-		return hovered;
-	}
+export function OnHover(props: OnHoverProps) {
+	const { ResetToBeforeHover, ResetDuration, ResetEasing, ResetEasingDirection, ResetDelay, children } = props;
+	return (
+		<HoverBase
+			ResetToBeforeHover={ResetToBeforeHover}
+			ResetDuration={ResetDuration}
+			ResetEasing={ResetEasing}
+			ResetEasingDirection={ResetEasingDirection}
+			ResetDelay={ResetDelay}
+			children={children}
+			shouldRender={(hovered) => hovered}
+		/>
+	);
 }

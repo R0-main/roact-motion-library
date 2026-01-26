@@ -1,4 +1,4 @@
-import Roact from "@rbxts/roact";
+import React from "@rbxts/react";
 import { MotionTween, MotionTweenProps } from "./motion-tween";
 
 export interface MotionScaleProps extends Omit<MotionTweenProps, "Goal" | "From"> {
@@ -6,57 +6,46 @@ export interface MotionScaleProps extends Omit<MotionTweenProps, "Goal" | "From"
 	To?: number;
 }
 
-interface MotionScaleState {
-	initialScale: number;
-}
+const defaultProps: Partial<MotionScaleProps> = {
+	Duration: 1,
+	Looped: false,
+	Easing: Enum.EasingStyle.Sine,
+	EasingDirection: Enum.EasingDirection.InOut,
+	Delay: 0,
+	RepeatDelay: 0,
+};
 
-export class MotionScale extends Roact.Component<MotionScaleProps, MotionScaleState> {
-	private ref: Roact.Ref<UIScale> | undefined;
+export function MotionScale(props: MotionScaleProps) {
+	const ref = React.useRef<UIScale>();
+	const [initialScale, setInitialScale] = React.useState(1);
 
-	public static defaultProps: Partial<MotionScaleProps> = {
-		Duration: 1,
-		Looped: false,
-		Easing: Enum.EasingStyle.Sine,
-		EasingDirection: Enum.EasingDirection.InOut,
-		Delay: 0,
-		RepeatDelay: 0,
-	};
-
-	public init() {
-		this.ref = Roact.createRef<UIScale>();
-		this.setState({ initialScale: 1 });
-	}
-
-	public didMount() {
-		const uiScale = this.ref?.getValue();
+	React.useEffect(() => {
+		const uiScale = ref.current;
 		const parent = uiScale?.Parent;
 		if (parent && parent.IsA("GuiObject")) {
 			const existingScale = parent.FindFirstChildOfClass("UIScale");
 			if (existingScale && existingScale !== uiScale) {
-				this.setState({ initialScale: existingScale.Scale });
+				setInitialScale(existingScale.Scale);
 			}
 		}
-	}
+	}, []);
 
-	public render() {
-		const { From, To, Duration, Looped, Easing, EasingDirection, Delay, RepeatDelay, OnStart, OnFinished } =
-			this.props;
+	const { From, To, Duration = defaultProps.Duration, Looped = defaultProps.Looped, Easing = defaultProps.Easing, EasingDirection = defaultProps.EasingDirection, Delay = defaultProps.Delay, RepeatDelay = defaultProps.RepeatDelay, OnStart, OnFinished } = props;
 
-		return (
-			<uiscale Ref={this.ref}>
-				<MotionTween
-					Goal={{ Scale: To ?? this.state.initialScale }}
-					From={From !== undefined ? { Scale: From } : { Scale: this.state.initialScale }}
-					Duration={Duration}
-					Looped={Looped}
-					Easing={Easing}
-					EasingDirection={EasingDirection}
-					Delay={Delay}
-					RepeatDelay={RepeatDelay}
-					OnStart={OnStart}
-					OnFinished={OnFinished}
-				/>
-			</uiscale>
-		);
-	}
+	return (
+		<uiscale ref={ref}>
+			<MotionTween
+				Goal={{ Scale: To ?? initialScale }}
+				From={From !== undefined ? { Scale: From } : { Scale: initialScale }}
+				Duration={Duration}
+				Looped={Looped}
+				Easing={Easing}
+				EasingDirection={EasingDirection}
+				Delay={Delay}
+				RepeatDelay={RepeatDelay}
+				OnStart={OnStart}
+				OnFinished={OnFinished}
+			/>
+		</uiscale>
+	);
 }

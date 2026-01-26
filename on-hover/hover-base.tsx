@@ -1,4 +1,4 @@
-import Roact from "@rbxts/roact";
+import React from "@rbxts/react";
 import { HoverContext, ResetProps } from "../hover-context";
 
 export interface OnHoverProps {
@@ -7,31 +7,36 @@ export interface OnHoverProps {
 	ResetEasing?: Enum.EasingStyle;
 	ResetEasingDirection?: Enum.EasingDirection;
 	ResetDelay?: number;
+	children?: React.ReactNode;
 }
 
-export interface OnHoverState {
-	hovered: boolean;
+export interface HoverBaseProps extends OnHoverProps {
+	shouldRender: (hovered: boolean) => boolean;
 }
 
-export abstract class HoverBase extends Roact.Component<OnHoverProps, OnHoverState> {
-	protected ref: Roact.Ref<Folder> | undefined;
-	private connEnter?: RBXScriptConnection;
-	private connLeave?: RBXScriptConnection;
+const defaultProps: Partial<OnHoverProps> = {
+	ResetToBeforeHover: true,
+};
 
-	public static defaultProps: Partial<OnHoverProps> = {
-		ResetToBeforeHover: true,
-	};
+export function HoverBase(props: HoverBaseProps) {
+	const {
+		ResetToBeforeHover = defaultProps.ResetToBeforeHover,
+		ResetDuration,
+		ResetEasing,
+		ResetEasingDirection,
+		ResetDelay,
+		shouldRender,
+		children,
+	} = props;
 
-	public init() {
-		this.ref = Roact.createRef<Folder>();
-		this.setState({
-			hovered: false,
-		});
-	}
+	const ref = React.useRef<Folder>();
+	const [hovered, setHovered] = React.useState(false);
+	const connEnterRef = React.useRef<RBXScriptConnection>();
+	const connLeaveRef = React.useRef<RBXScriptConnection>();
 
-	public didMount() {
+	React.useEffect(() => {
 		task.spawn(() => {
-			const folder = this.ref?.getValue();
+			const folder = ref.current;
 			if (!folder) return;
 
 			let target = folder.Parent;
@@ -55,81 +60,73 @@ export abstract class HoverBase extends Roact.Component<OnHoverProps, OnHoverSta
 			}
 
 			if (target && target.IsA("GuiObject")) {
-				this.connEnter = target.MouseEnter.Connect(() => {
-					this.setState({ hovered: true });
+				connEnterRef.current = target.MouseEnter.Connect(() => {
+					setHovered(true);
 				});
-				this.connLeave = target.MouseLeave.Connect(() => {
-					this.setState({ hovered: false });
+				connLeaveRef.current = target.MouseLeave.Connect(() => {
+					setHovered(false);
 				});
 			} else {
 				// warn(`Hover component must be a descendant of a GuiObject. Parent is ${folder.Parent?.ClassName} | ${target}`);
 			}
 		});
+
+		return () => {
+			connEnterRef.current?.Disconnect();
+			connEnterRef.current = undefined;
+			connLeaveRef.current?.Disconnect();
+			connLeaveRef.current = undefined;
+		};
+	}, []);
+
+	print(`[HoverBase] render. hovered: ${hovered}`);
+
+	const showChildren = ResetToBeforeHover ? true : shouldRender(hovered);
+
+	let isResetEnabled = !!ResetToBeforeHover;
+	// If any individual reset prop is present, enable reset
+	if (
+		ResetDuration !== undefined ||
+		ResetEasing !== undefined ||
+		ResetEasingDirection !== undefined ||
+		ResetDelay !== undefined
+	) {
+		isResetEnabled = true;
 	}
 
-	public willUnmount() {
-		this.connEnter?.Disconnect();
-		this.connEnter = undefined;
-		this.connLeave?.Disconnect();
-		this.connLeave = undefined;
+	let resetProps: ResetProps | undefined;
+
+	if (typeIs(ResetToBeforeHover, "table")) {
+		// Legacy/Object style
+		resetProps = ResetToBeforeHover as ResetProps;
 	}
 
-	protected abstract shouldRender(hovered: boolean): boolean;
-
-	public render() {
-		const { ResetToBeforeHover, ResetDuration, ResetEasing, ResetEasingDirection, ResetDelay } = this.props;
-		const { hovered } = this.state;
-		print(`[HoverBase] render. hovered: ${hovered}`);
-
-		const showChildren = ResetToBeforeHover ? true : this.shouldRender(hovered);
-
-		let isResetEnabled = !!ResetToBeforeHover;
-		// If any individual reset prop is present, enable reset
-		if (
-			ResetDuration !== undefined ||
-			ResetEasing !== undefined ||
-			ResetEasingDirection !== undefined ||
-			ResetDelay !== undefined
-		) {
-			isResetEnabled = true;
-		}
-
-		let resetProps: ResetProps | undefined;
-
-		if (typeIs(ResetToBeforeHover, "table")) {
-			// Legacy/Object style
-			resetProps = ResetToBeforeHover as ResetProps;
-		}
-
-		// If individual props are used, they override or create the object
-		if (
-			ResetDuration !== undefined ||
-			ResetEasing !== undefined ||
-			ResetEasingDirection !== undefined ||
-			ResetDelay !== undefined
-		) {
-			if (resetProps === undefined) resetProps = {};
-			if (ResetDuration !== undefined) resetProps.Duration = ResetDuration;
-			if (ResetEasing !== undefined) resetProps.Easing = ResetEasing;
-			if (ResetEasingDirection !== undefined) resetProps.EasingDirection = ResetEasingDirection;
-			if (ResetDelay !== undefined) resetProps.Delay = ResetDelay;
-		}
-
-		return (
-			<>
-				{Roact.createElement("Folder", {
-					[Roact.Ref]: this.ref,
-				})}
-				<HoverContext.Provider
-					value={{
-						hovered: hovered,
-						isResetEnabled: isResetEnabled,
-						resetProps: resetProps,
-					}}
-				>
-					{showChildren && this.props[Roact.Children]}
-				</HoverContext.Provider>
-			</>
-		);
+	// If individual props are used, they override or create the object
+	if (
+		ResetDuration !== undefined ||
+		ResetEasing !== undefined ||
+		ResetEasingDirection !== undefined ||
+		ResetDelay !== undefined
+	) {
+		if (resetProps === undefined) resetProps = {};
+		if (ResetDuration !== undefined) resetProps.Duration = ResetDuration;
+		if (ResetEasing !== undefined) resetProps.Easing = ResetEasing;
+		if (ResetEasingDirection !== undefined) resetProps.EasingDirection = ResetEasingDirection;
+		if (ResetDelay !== undefined) resetProps.Delay = ResetDelay;
 	}
+
+	return (
+		<>
+			<folder ref={ref} />
+			<HoverContext.Provider
+				value={{
+					hovered: hovered,
+					isResetEnabled: isResetEnabled,
+					resetProps: resetProps,
+				}}
+			>
+				{showChildren && children}
+			</HoverContext.Provider>
+		</>
+	);
 }

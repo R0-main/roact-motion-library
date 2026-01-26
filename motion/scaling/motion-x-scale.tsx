@@ -1,4 +1,4 @@
-import Roact from "@rbxts/roact";
+import React from "@rbxts/react";
 import { MotionTween, MotionTweenProps } from "../motion-tween";
 
 export interface MotionXScaleProps extends Omit<MotionTweenProps, "Goal" | "From"> {
@@ -6,73 +6,62 @@ export interface MotionXScaleProps extends Omit<MotionTweenProps, "Goal" | "From
 	To?: number;
 }
 
-interface MotionXScaleState {
-	initialSize: UDim2;
-	initialized: boolean;
-}
+const defaultProps: Partial<MotionXScaleProps> = {
+	Duration: 1,
+	Looped: false,
+	Easing: Enum.EasingStyle.Sine,
+	EasingDirection: Enum.EasingDirection.InOut,
+	Delay: 0,
+	RepeatDelay: 0,
+};
 
-export class MotionXScale extends Roact.Component<MotionXScaleProps, MotionXScaleState> {
-	private ref!: Roact.Ref<Folder>;
+export function MotionXScale(props: MotionXScaleProps) {
+	const ref = React.useRef<Folder>();
+	const [initialSize, setInitialSize] = React.useState<UDim2>(new UDim2());
+	const [initialized, setInitialized] = React.useState(false);
 
-	public static defaultProps: Partial<MotionXScaleProps> = {
-		Duration: 1,
-		Looped: false,
-		Easing: Enum.EasingStyle.Sine,
-		EasingDirection: Enum.EasingDirection.InOut,
-		Delay: 0,
-		RepeatDelay: 0,
-	};
-
-	public init() {
-		this.setState({
-			initialSize: new UDim2(),
-			initialized: false,
-		});
-		this.ref = Roact.createRef<Folder>();
-	}
-
-	public didMount() {
-		const folder = this.ref.getValue();
+	React.useEffect(() => {
+		const folder = ref.current;
 		const parent = folder?.Parent;
 		if (parent && parent.IsA("GuiObject")) {
-			this.setState({ initialSize: parent.Size, initialized: true });
+			setInitialSize(parent.Size);
+			setInitialized(true);
 		}
+	}, []);
+
+	const { From, To, Duration, Looped, Easing, EasingDirection, Delay, RepeatDelay, OnStart, OnFinished, DestroyAfterFinished } = props;
+
+	if (!initialized) {
+		return <folder ref={ref} />;
 	}
 
-	public render() {
-		const { From, To } = this.props;
-		const motionProps: Omit<MotionXScaleProps, "From" | "To"> = { ...this.props };
-		const { initialSize, initialized } = this.state;
+	const targetXScale = initialSize.X.Scale * (To ?? 1);
+	const targetXOffset = initialSize.X.Offset * (To ?? 1);
+	const goalSize = new UDim2(targetXScale, targetXOffset, initialSize.Y.Scale, initialSize.Y.Offset);
 
-		// We use a Folder to grab the Parent instance
-		const refElement = Roact.createElement("Folder", {
-			[Roact.Ref]: this.ref,
-		});
-
-		if (!initialized) {
-			return refElement;
-		}
-
-		const targetXScale = initialSize.X.Scale * (To ?? 1);
-		const targetXOffset = initialSize.X.Offset * (To ?? 1);
-		const goalSize = new UDim2(targetXScale, targetXOffset, initialSize.Y.Scale, initialSize.Y.Offset);
-
-		let fromSize: UDim2 | undefined;
-		if (From !== undefined) {
-			const fromXScale = initialSize.X.Scale * From;
-			const fromXOffset = initialSize.X.Offset * From;
-			fromSize = new UDim2(fromXScale, fromXOffset, initialSize.Y.Scale, initialSize.Y.Offset);
-		}
-
-		return (
-			<>
-				{refElement}
-				<MotionTween
-					{...motionProps}
-					Goal={{ Size: goalSize }}
-					From={fromSize ? { Size: fromSize } : undefined}
-				/>
-			</>
-		);
+	let fromSize: UDim2 | undefined;
+	if (From !== undefined) {
+		const fromXScale = initialSize.X.Scale * From;
+		const fromXOffset = initialSize.X.Offset * From;
+		fromSize = new UDim2(fromXScale, fromXOffset, initialSize.Y.Scale, initialSize.Y.Offset);
 	}
+
+	return (
+		<>
+			<folder ref={ref} />
+			<MotionTween
+				Duration={Duration}
+				Looped={Looped}
+				Easing={Easing}
+				EasingDirection={EasingDirection}
+				Delay={Delay}
+				RepeatDelay={RepeatDelay}
+				OnStart={OnStart}
+				OnFinished={OnFinished}
+				DestroyAfterFinished={DestroyAfterFinished}
+				Goal={{ Size: goalSize }}
+				From={fromSize ? { Size: fromSize } : undefined}
+			/>
+		</>
+	);
 }

@@ -1,4 +1,4 @@
-import Roact from "@rbxts/roact";
+import React from "@rbxts/react";
 
 export interface MotionTypewriterProps {
 	Speed: number; // Seconds per character
@@ -7,53 +7,28 @@ export interface MotionTypewriterProps {
 	OnStart?: () => void;
 }
 
-export class MotionTypewriter extends Roact.Component<MotionTypewriterProps> {
-	private ref: Roact.Ref<Folder> | undefined;
-	private connection?: RBXScriptConnection;
-	private typewriterThread?: thread;
+const defaultProps: Partial<MotionTypewriterProps> = {
+	Speed: 0.05,
+	Delay: 0,
+};
 
-	public static defaultProps: Partial<MotionTypewriterProps> = {
-		Speed: 0.05,
-		Delay: 0,
-	};
+export function MotionTypewriter(props: MotionTypewriterProps) {
+	const ref = React.useRef<Folder>();
+	const connectionRef = React.useRef<RBXScriptConnection>();
+	const typewriterThreadRef = React.useRef<thread>();
 
-	public init() {
-		this.ref = Roact.createRef<Folder>();
-	}
-
-	public didMount() {
-		const folder = this.ref?.getValue();
-		const parent = folder?.Parent;
-
-		if (parent && (parent.IsA("TextLabel") || parent.IsA("TextButton") || parent.IsA("TextBox"))) {
-			this.startTypewriter(parent);
-			this.connection = parent.GetPropertyChangedSignal("Text").Connect(() => {
-				this.startTypewriter(parent);
-			});
-		} else {
-			warn("MotionTypewriter must be a child of a TextObject (TextLabel, TextButton, TextBox)");
+	function stopTypewriter() {
+		if (typewriterThreadRef.current) {
+			task.cancel(typewriterThreadRef.current);
+			typewriterThreadRef.current = undefined;
 		}
 	}
 
-	public willUnmount() {
-		this.stopTypewriter();
-		if (this.connection) {
-			this.connection.Disconnect();
-		}
-	}
+	function startTypewriter(target: TextLabel | TextButton | TextBox) {
+		stopTypewriter();
 
-	private stopTypewriter() {
-		if (this.typewriterThread) {
-			task.cancel(this.typewriterThread);
-			this.typewriterThread = undefined;
-		}
-	}
-
-	private startTypewriter(target: TextLabel | TextButton | TextBox) {
-		this.stopTypewriter();
-
-		this.typewriterThread = task.spawn(() => {
-			const { Speed, Delay, OnStart, OnFinished } = this.props;
+		typewriterThreadRef.current = task.spawn(() => {
+			const { Speed = defaultProps.Speed!, Delay = defaultProps.Delay, OnStart, OnFinished } = props;
 
 			target.MaxVisibleGraphemes = 0;
 
@@ -65,22 +40,44 @@ export class MotionTypewriter extends Roact.Component<MotionTypewriterProps> {
 
 			const text = target.Text;
 			const length = text.size();
-			const speed = Speed ?? 0.05;
+			const speed = Speed;
 
 			for (let i = 1; i <= length; i++) {
 				target.MaxVisibleGraphemes = i;
 				task.wait(speed);
 			}
 
-			this.typewriterThread = undefined;
+			typewriterThreadRef.current = undefined;
 			if (OnFinished) OnFinished();
 		});
 	}
 
-	public render() {
-		return Roact.createElement("Folder", {
-			[Roact.Ref]: this.ref,
-			Name: "MotionTypewriter",
-		});
-	}
+	React.useEffect(() => {
+		const folder = ref.current;
+		const parent = folder?.Parent;
+
+		if (parent && (parent.IsA("TextLabel") || parent.IsA("TextButton") || parent.IsA("TextBox"))) {
+			startTypewriter(parent);
+			connectionRef.current = parent.GetPropertyChangedSignal("Text").Connect(() => {
+				startTypewriter(parent);
+			});
+		} else {
+			warn("MotionTypewriter must be a child of a TextObject (TextLabel, TextButton, TextBox)");
+		}
+
+		return () => {
+			stopTypewriter();
+			if (connectionRef.current) {
+				connectionRef.current.Disconnect();
+			}
+		};
+	}, [props.Speed, props.Delay]);
+
+	React.useEffect(() => {
+		if (ref.current) {
+			ref.current.Name = "MotionTypewriter";
+		}
+	}, []);
+
+	return <folder ref={ref} />;
 }

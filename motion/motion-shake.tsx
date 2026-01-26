@@ -1,4 +1,4 @@
-import Roact from "@rbxts/roact";
+import React from "@rbxts/react";
 import { RunService } from "@rbxts/services";
 
 export interface MotionShakeProps {
@@ -10,70 +10,58 @@ export interface MotionShakeProps {
 	OnStart?: () => void;
 }
 
-export class MotionShake extends Roact.Component<MotionShakeProps> {
-	private ref: Roact.Ref<Folder> | undefined;
-	private connection?: RBXScriptConnection;
-	private originalPosition?: UDim2;
+const defaultProps: Partial<MotionShakeProps> = {
+	Duration: 0.5,
+	Intensity: 5,
+	Decay: true,
+	Delay: 0,
+};
 
-	public static defaultProps: Partial<MotionShakeProps> = {
-		Duration: 0.5,
-		Intensity: 5,
-		Decay: true,
-		Delay: 0,
-	};
+export function MotionShake(props: MotionShakeProps) {
+	const ref = React.useRef<Folder>();
+	const connectionRef = React.useRef<RBXScriptConnection>();
+	const originalPositionRef = React.useRef<UDim2>();
+	const targetRef = React.useRef<GuiObject>();
 
-	public init() {
-		this.ref = Roact.createRef<Folder>();
-	}
-
-	public didMount() {
-		const folder = this.ref?.getValue();
-		const parent = folder?.Parent;
-
-		if (parent && parent.IsA("GuiObject")) {
-			this.originalPosition = parent.Position; // Capture original position
-			this.startShake(parent);
-		} else {
-			warn("MotionShake must be a child of a GuiObject");
-		}
-	}
-
-	public willUnmount() {
-		this.cleanup();
-	}
-
-	private cleanup(parent?: GuiObject) {
-		if (this.connection) {
-			this.connection.Disconnect();
-			this.connection = undefined;
+	function cleanup(parent?: GuiObject) {
+		if (connectionRef.current) {
+			connectionRef.current.Disconnect();
+			connectionRef.current = undefined;
 		}
 		// Reset to original position if we have it and the parent is still there
-		if (this.originalPosition && parent) {
-			parent.Position = this.originalPosition;
+		if (originalPositionRef.current && parent) {
+			parent.Position = originalPositionRef.current;
 		}
 	}
 
-	private startShake(target: GuiObject) {
-		const { Duration, Intensity, Decay, Delay, OnStart, OnFinished } = this.props;
+	function startShake(target: GuiObject) {
+		const {
+			Duration = defaultProps.Duration!,
+			Intensity = defaultProps.Intensity!,
+			Decay = defaultProps.Decay!,
+			Delay = defaultProps.Delay!,
+			OnStart,
+			OnFinished,
+		} = props;
 
 		const runShake = () => {
 			if (OnStart) OnStart();
 
 			const startTime = tick();
 
-			this.connection = RunService.Heartbeat.Connect(() => {
+			connectionRef.current = RunService.Heartbeat.Connect(() => {
 				const elapsed = tick() - startTime;
 
-				if (Duration !== -1 && elapsed >= Duration!) {
-					this.cleanup(target);
+				if (Duration !== -1 && elapsed >= Duration) {
+					cleanup(target);
 					if (OnFinished) OnFinished();
 					return;
 				}
 
 				// Calculate current intensity
-				let currentIntensity = Intensity!;
+				let currentIntensity = Intensity;
 				if (Decay && Duration !== -1) {
-					const alpha = 1 - elapsed / Duration!;
+					const alpha = 1 - elapsed / Duration;
 					currentIntensity *= alpha;
 				}
 
@@ -82,12 +70,12 @@ export class MotionShake extends Roact.Component<MotionShakeProps> {
 				const offsetY = (math.random() - 0.5) * 2 * currentIntensity;
 
 				// Apply to original position
-				if (this.originalPosition) {
+				if (originalPositionRef.current) {
 					target.Position = new UDim2(
-						this.originalPosition.X.Scale,
-						this.originalPosition.X.Offset + offsetX,
-						this.originalPosition.Y.Scale,
-						this.originalPosition.Y.Offset + offsetY,
+						originalPositionRef.current.X.Scale,
+						originalPositionRef.current.X.Offset + offsetX,
+						originalPositionRef.current.Y.Scale,
+						originalPositionRef.current.Y.Offset + offsetY,
 					);
 				}
 			});
@@ -100,10 +88,28 @@ export class MotionShake extends Roact.Component<MotionShakeProps> {
 		}
 	}
 
-	public render() {
-		return Roact.createElement("Folder", {
-			Name: "MotionShake",
-			[Roact.Ref]: this.ref,
-		});
-	}
+	React.useEffect(() => {
+		const folder = ref.current;
+		const parent = folder?.Parent;
+
+		if (parent && parent.IsA("GuiObject")) {
+			originalPositionRef.current = parent.Position; // Capture original position
+			targetRef.current = parent;
+			startShake(parent);
+		} else {
+			warn("MotionShake must be a child of a GuiObject");
+		}
+
+		return () => {
+			cleanup(targetRef.current);
+		};
+	}, [props.Duration, props.Intensity, props.Decay, props.Delay]);
+
+	React.useEffect(() => {
+		if (ref.current) {
+			ref.current.Name = "MotionShake";
+		}
+	}, []);
+
+	return <folder ref={ref} />;
 }
