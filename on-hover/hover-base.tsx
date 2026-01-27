@@ -79,8 +79,6 @@ export function HoverBase(props: HoverBaseProps) {
 		};
 	}, []);
 
-	print(`[HoverBase] render. hovered: ${hovered}`);
-
 	const showChildren = ResetToBeforeHover ? true : shouldRender(hovered);
 
 	let isResetEnabled = !!ResetToBeforeHover;
