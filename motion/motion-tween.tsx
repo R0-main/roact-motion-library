@@ -229,7 +229,19 @@ function MotionTweenInner(props: MotionTweenProps) {
 // Wrapper component to consume Context
 export function MotionTween(props: MotionTweenProps) {
 	const context = React.useContext(HoverContext);
-	const { Goal, From, Duration, Looped, Easing, EasingDirection, Delay, RepeatDelay, OnStart, OnFinished, DestroyAfterFinished } = props;
+	const {
+		Goal,
+		From,
+		Duration,
+		Looped,
+		Easing,
+		EasingDirection,
+		Delay,
+		RepeatDelay,
+		OnStart,
+		OnFinished,
+		DestroyAfterFinished,
+	} = props;
 
 	return (
 		<MotionTweenInner

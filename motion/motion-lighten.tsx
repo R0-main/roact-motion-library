@@ -49,7 +49,19 @@ export function MotionLighten(props: MotionLightenProps) {
 	}, [props.Property, props.Factor]);
 
 	const { initialColor, targetColor } = state;
-	const { Factor, Property, Duration, Looped, Easing, EasingDirection, Delay, RepeatDelay, OnStart, OnFinished, DestroyAfterFinished } = props;
+	const {
+		Factor,
+		Property,
+		Duration,
+		Looped,
+		Easing,
+		EasingDirection,
+		Delay,
+		RepeatDelay,
+		OnStart,
+		OnFinished,
+		DestroyAfterFinished,
+	} = props;
 
 	React.useEffect(() => {
 		if (ref.current) {

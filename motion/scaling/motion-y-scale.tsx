@@ -29,7 +29,19 @@ export function MotionYScale(props: MotionYScaleProps) {
 		}
 	}, []);
 
-	const { From, To, Duration, Looped, Easing, EasingDirection, Delay, RepeatDelay, OnStart, OnFinished, DestroyAfterFinished } = props;
+	const {
+		From,
+		To,
+		Duration,
+		Looped,
+		Easing,
+		EasingDirection,
+		Delay,
+		RepeatDelay,
+		OnStart,
+		OnFinished,
+		DestroyAfterFinished,
+	} = props;
 
 	if (!initialized) {
 		return <folder ref={ref} />;

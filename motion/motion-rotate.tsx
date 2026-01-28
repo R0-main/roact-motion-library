@@ -17,7 +17,19 @@ const defaultProps: Partial<MotionRotateProps> = {
 };
 
 export function MotionRotate(props: MotionRotateProps) {
-	const { From, To, Duration, Looped, Easing, EasingDirection, Delay, RepeatDelay, OnStart, OnFinished, DestroyAfterFinished } = props;
+	const {
+		From,
+		To,
+		Duration,
+		Looped,
+		Easing,
+		EasingDirection,
+		Delay,
+		RepeatDelay,
+		OnStart,
+		OnFinished,
+		DestroyAfterFinished,
+	} = props;
 
 	return (
 		<MotionTween

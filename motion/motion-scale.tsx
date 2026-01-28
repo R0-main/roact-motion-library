@@ -30,7 +30,18 @@ export function MotionScale(props: MotionScaleProps) {
 		}
 	}, []);
 
-	const { From, To, Duration = defaultProps.Duration, Looped = defaultProps.Looped, Easing = defaultProps.Easing, EasingDirection = defaultProps.EasingDirection, Delay = defaultProps.Delay, RepeatDelay = defaultProps.RepeatDelay, OnStart, OnFinished } = props;
+	const {
+		From,
+		To,
+		Duration = defaultProps.Duration,
+		Looped = defaultProps.Looped,
+		Easing = defaultProps.Easing,
+		EasingDirection = defaultProps.EasingDirection,
+		Delay = defaultProps.Delay,
+		RepeatDelay = defaultProps.RepeatDelay,
+		OnStart,
+		OnFinished,
+	} = props;
 
 	return (
 		<uiscale ref={ref}>

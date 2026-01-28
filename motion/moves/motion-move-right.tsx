@@ -13,7 +13,19 @@ const defaultProps: Partial<MotionMoveDirectionProps> = {
 };
 
 export function MotionMoveRight(props: MotionMoveDirectionProps) {
-	const { Distance = defaultProps.Distance!, Speed, Duration, Looped, Easing, EasingDirection, Delay, RepeatDelay, OnStart, OnFinished, DestroyAfterFinished } = props;
+	const {
+		Distance = defaultProps.Distance!,
+		Speed,
+		Duration,
+		Looped,
+		Easing,
+		EasingDirection,
+		Delay,
+		RepeatDelay,
+		OnStart,
+		OnFinished,
+		DestroyAfterFinished,
+	} = props;
 	const dist = Distance;
 	const defaultFrom = UDim2.fromScale(dist, 0);
 

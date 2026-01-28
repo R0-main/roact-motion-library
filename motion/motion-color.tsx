@@ -24,7 +24,20 @@ const defaultProps: Partial<MotionColorProps> = {
 };
 
 export function MotionColor(props: MotionColorProps) {
-	const { From, To, Property, Duration, Looped, Easing, EasingDirection, Delay, RepeatDelay, OnStart, OnFinished, DestroyAfterFinished } = props;
+	const {
+		From,
+		To,
+		Property,
+		Duration,
+		Looped,
+		Easing,
+		EasingDirection,
+		Delay,
+		RepeatDelay,
+		OnStart,
+		OnFinished,
+		DestroyAfterFinished,
+	} = props;
 
 	return (
 		<MotionTween

@@ -14,7 +14,11 @@ const defaultProps: Partial<MotionRgbGradientProps> = {
 };
 
 export function MotionRgbGradient(props: MotionRgbGradientProps) {
-	const { Speed = defaultProps.Speed!, Direction = defaultProps.Direction!, Rotation = defaultProps.Rotation } = props;
+	const {
+		Speed = defaultProps.Speed!,
+		Direction = defaultProps.Direction!,
+		Rotation = defaultProps.Rotation,
+	} = props;
 	const [colorBinding, setColorBinding] = React.useBinding(new ColorSequence(Color3.fromRGB(255, 0, 0)));
 	const connectionRef = React.useRef<RBXScriptConnection>();
 

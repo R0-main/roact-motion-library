@@ -84,7 +84,8 @@ export function HoverFrame(props: HoverFrameProps) {
 	return (
 		<>
 			<folder ref={triggerRef} />
-			{rendering && playerGui && (
+			{rendering &&
+				playerGui &&
 				createPortal(
 					<screengui
 						DisplayOrder={DisplayOrder}
@@ -114,9 +115,8 @@ export function HoverFrame(props: HoverFrameProps) {
 							{children}
 						</canvasgroup>
 					</screengui>,
-					playerGui
-				)
-			)}
+					playerGui,
+				)}
 		</>
 	);
 }
