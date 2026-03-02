@@ -13,7 +13,7 @@ export interface MotionFadeProps extends Omit<MotionTweenProps, "Goal" | "From">
 		| "ScrollBarImageTransparency"
 		| "ScrollBarThickness"
 		| "SelectionImageTransparency"
-		| "Transparency"
+		| "Transparency";
 }
 
 const defaultProps: Partial<MotionFadeProps> = {
