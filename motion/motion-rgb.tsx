@@ -67,7 +67,10 @@ export function MotionRGB(props: MotionRGBProps) {
 		// Use RenderStepped on client, Heartbeat on server
 		const event = RunService.IsClient() ? RunService.RenderStepped : RunService.Heartbeat;
 
+		let frameSkip = 0;
 		connRef.current = event.Connect(() => {
+			frameSkip++;
+			if (frameSkip % 2 !== 0) return;
 			const hue = ((tick() + seedOffset) % cycleTime) / cycleTime;
 			const color = Color3.fromHSV(hue, s, v);
 			(target as unknown as Record<string, unknown>)[prop] = color;

@@ -31,7 +31,7 @@ export function HoverFrame(props: HoverFrameProps) {
 	const triggerRef = React.useRef<Folder>();
 	const [hovered, setHovered] = React.useState(false);
 	const [rendering, setRendering] = React.useState(false);
-	const [position, setPosition] = React.useState<UDim2>(UDim2.fromOffset(0, 0));
+	const [positionBinding, setPositionBinding] = React.useBinding(UDim2.fromOffset(0, 0));
 	const [playerGui, setPlayerGui] = React.useState<Instance | undefined>(undefined);
 	const connEnterRef = React.useRef<RBXScriptConnection>();
 	const connLeaveRef = React.useRef<RBXScriptConnection>();
@@ -59,14 +59,12 @@ export function HoverFrame(props: HoverFrameProps) {
 			warn("HoverFrame must be a child of a GuiObject");
 		}
 
-		connRenderRef.current = RunService.RenderStepped.Connect(() => {
-			if (rendering) {
+		if (rendering) {
+			connRenderRef.current = RunService.RenderStepped.Connect(() => {
 				const mousePos = UserInputService.GetMouseLocation();
-
-				// Using IgnoreGuiInset=true on ScreenGui means (0,0) is top-left of screen, matching GetMouseLocation
-				setPosition(UDim2.fromOffset(mousePos.X + Offset.X, mousePos.Y + Offset.Y));
-			}
-		});
+				setPositionBinding(UDim2.fromOffset(mousePos.X + Offset.X, mousePos.Y + Offset.Y));
+			});
+		}
 
 		return () => {
 			connEnterRef.current?.Disconnect();
@@ -95,7 +93,7 @@ export function HoverFrame(props: HoverFrameProps) {
 					>
 						<canvasgroup
 							GroupTransparency={1} // Start invisible, MotionFade will handle it
-							Position={position}
+							Position={positionBinding}
 							Size={Size ?? UDim2.fromOffset(0, 0)}
 							AutomaticSize={Enum.AutomaticSize.XY}
 							BorderSizePixel={0}

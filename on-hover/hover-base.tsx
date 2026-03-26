@@ -39,35 +39,23 @@ export function HoverBase(props: HoverBaseProps) {
 			const folder = ref.current;
 			if (!folder) return;
 
-			let target = folder.Parent;
-			let attempts = 0;
+			let target: GuiObject | undefined =
+				folder.Parent?.IsA("GuiObject")
+					? (folder.Parent as GuiObject)
+					: (folder.FindFirstAncestorWhichIsA("GuiObject") as GuiObject | undefined);
 
-			while (attempts < 20) {
-				if (target && target.IsA("GuiObject")) {
-					break;
-				}
-
-				if (target) {
-					const ancestor = target.FindFirstAncestorWhichIsA("GuiObject");
-					if (ancestor) {
-						target = ancestor;
-						break;
-					}
-				}
-
-				attempts++;
-				task.wait(0.1);
+			if (!target) {
+				task.wait(0);
+				target = folder.FindFirstAncestorWhichIsA("GuiObject") as GuiObject | undefined;
 			}
 
-			if (target && target.IsA("GuiObject")) {
+			if (target) {
 				connEnterRef.current = target.MouseEnter.Connect(() => {
 					setHovered(true);
 				});
 				connLeaveRef.current = target.MouseLeave.Connect(() => {
 					setHovered(false);
 				});
-			} else {
-				// warn(`Hover component must be a descendant of a GuiObject. Parent is ${folder.Parent?.ClassName} | ${target}`);
 			}
 		});
 

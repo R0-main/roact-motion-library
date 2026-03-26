@@ -23,7 +23,10 @@ export function MotionRgbGradient(props: MotionRgbGradientProps) {
 	const connectionRef = React.useRef<RBXScriptConnection>();
 
 	React.useEffect(() => {
+		let frameSkip = 0;
 		connectionRef.current = RunService.Heartbeat.Connect(() => {
+			frameSkip++;
+			if (frameSkip % 3 !== 0) return;
 			const speedVal = Speed;
 			const time = os.clock();
 

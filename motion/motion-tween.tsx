@@ -64,6 +64,8 @@ function MotionTweenInner(props: MotionTweenProps) {
 	const connRef = React.useRef<RBXScriptConnection>();
 	const initialValuesRef = React.useRef<Record<string, unknown>>({});
 	const prevPropsRef = React.useRef<MotionTweenProps>();
+	const tweenInfoRef = React.useRef<TweenInfo>();
+	const tweenInfoKeyRef = React.useRef<string>();
 
 	React.useEffect(() => {
 		const folder = ref.current;
@@ -177,14 +179,19 @@ function MotionTweenInner(props: MotionTweenProps) {
 			}
 		}
 
-		const tweenInfo = new TweenInfo(
-			effectiveDuration,
-			effectiveEasing,
-			effectiveEasingDirection,
-			Looped ? -1 : 0, // Repeat count (-1 is infinite)
-			Looped, // Reverses
-			RepeatDelay,
-		);
+		const infoKey = `${effectiveDuration}_${effectiveEasing.Value}_${effectiveEasingDirection.Value}_${Looped}_${RepeatDelay}`;
+		if (!tweenInfoRef.current || tweenInfoKeyRef.current !== infoKey) {
+			tweenInfoRef.current = new TweenInfo(
+				effectiveDuration,
+				effectiveEasing,
+				effectiveEasingDirection,
+				Looped ? -1 : 0,
+				Looped,
+				RepeatDelay,
+			);
+			tweenInfoKeyRef.current = infoKey;
+		}
+		const tweenInfo = tweenInfoRef.current;
 
 		// If effectiveGoal is missing keys (e.g. initialValues empty), this might error or do nothing.
 		// Usually initialValues will be populated in didMount.
@@ -229,33 +236,33 @@ function MotionTweenInner(props: MotionTweenProps) {
 // Wrapper component to consume Context
 export function MotionTween(props: MotionTweenProps) {
 	const context = React.useContext(HoverContext);
-	const {
-		Goal,
-		From,
-		Duration,
-		Looped,
-		Easing,
-		EasingDirection,
-		Delay,
-		RepeatDelay,
-		OnStart,
-		OnFinished,
-		DestroyAfterFinished,
-	} = props;
+
+	// Stabilize Goal/From references: only update if values actually changed.
+	// Prevents MotionTweenInner's useEffect from firing when the parent re-renders
+	// with a new inline object literal that has the same values.
+	const stableGoalRef = React.useRef<Record<string, unknown>>(props.Goal);
+	const stableFromRef = React.useRef<Record<string, unknown> | undefined>(props.From);
+
+	if (!shallowEqual(props.Goal, stableGoalRef.current)) {
+		stableGoalRef.current = props.Goal;
+	}
+	if (!shallowEqual(props.From, stableFromRef.current)) {
+		stableFromRef.current = props.From;
+	}
 
 	return (
 		<MotionTweenInner
-			Goal={Goal}
-			From={From}
-			Duration={Duration}
-			Looped={Looped}
-			Easing={Easing}
-			EasingDirection={EasingDirection}
-			Delay={Delay}
-			RepeatDelay={RepeatDelay}
-			OnStart={OnStart}
-			OnFinished={OnFinished}
-			DestroyAfterFinished={DestroyAfterFinished}
+			Goal={stableGoalRef.current}
+			From={stableFromRef.current}
+			Duration={props.Duration}
+			Looped={props.Looped}
+			Easing={props.Easing}
+			EasingDirection={props.EasingDirection}
+			Delay={props.Delay}
+			RepeatDelay={props.RepeatDelay}
+			OnStart={props.OnStart}
+			OnFinished={props.OnFinished}
+			DestroyAfterFinished={props.DestroyAfterFinished}
 			_hovered={context.hovered}
 			_isResetEnabled={context.isResetEnabled}
 			_resetProps={context.resetProps}
