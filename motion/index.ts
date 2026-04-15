@@ -6,6 +6,7 @@ export * from "./motion-slide";
 export * from "./motion-move";
 export * from "./moves";
 export * from "./motion-shake";
+export * from "./motion-rotation-shake";
 export * from "./motion-rgb";
 export * from "./motion-color";
 export * from "./motion-darken";
