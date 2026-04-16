@@ -16,6 +16,8 @@ export type DropContainerRecord = {
 	accepts?: (draggableId: DraggableId) => boolean;
 	priority: number;
 	onDrop?: (info: DropInfo) => void;
+	/** Called live on each hit-test. Return value (pixels) is added to the cursor Y before comparison. */
+	hitboxYOffset?: (gui: GuiObject) => number;
 };
 
 export type DragRegistry = {
@@ -74,7 +76,9 @@ export function pickBestContainer(
 
 	for (const container of containers) {
 		if (!container.guiObject.Parent) continue;
-		if (!isPointInGuiObject(point, container.guiObject)) continue;
+		const yOffset = container.hitboxYOffset ? container.hitboxYOffset(container.guiObject) : 0;
+		const adjustedPoint = yOffset !== 0 ? new Vector2(point.X, point.Y + yOffset) : point;
+		if (!isPointInGuiObject(adjustedPoint, container.guiObject)) continue;
 		if (container.accepts && !container.accepts(draggableId)) continue;
 
 		if (!best) {
