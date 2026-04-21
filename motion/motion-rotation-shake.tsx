@@ -3,6 +3,8 @@ import { RunService } from "@rbxts/services";
 
 export interface MotionRotationShakeProps {
 	Duration?: number;
+	/** Seconds of idle between shake bursts. When > 0, shakes for `Duration` (or 1s if Duration is -1) then pauses, repeating. */
+	PauseDuration?: number;
 	Intensity?: number;
 	Speed?: number;
 	Decay?: boolean;
@@ -12,6 +14,7 @@ export interface MotionRotationShakeProps {
 
 const defaultProps: Partial<MotionRotationShakeProps> = {
 	Duration: -1,
+	PauseDuration: 0,
 	Intensity: 1,
 	Speed: 18,
 	Decay: false,
@@ -36,6 +39,7 @@ export function MotionRotationShake(props: MotionRotationShakeProps) {
 	function startShake(target: GuiObject) {
 		const {
 			Duration = defaultProps.Duration!,
+			PauseDuration = defaultProps.PauseDuration!,
 			Intensity = defaultProps.Intensity!,
 			Speed = defaultProps.Speed!,
 			Decay = defaultProps.Decay!,
@@ -47,19 +51,37 @@ export function MotionRotationShake(props: MotionRotationShakeProps) {
 		if (OnStart) OnStart();
 
 		const startTime = tick();
+		const cyclic = PauseDuration > 0;
+		const shakeSegmentDuration = cyclic ? (Duration === -1 ? 1 : Duration) : Duration;
 
 		connectionRef.current = RunService.Heartbeat.Connect(() => {
 			const elapsed = tick() - startTime;
 
-			if (Duration !== -1 && elapsed >= Duration) {
+			if (cyclic) {
+				const cycleLength = PauseDuration + shakeSegmentDuration;
+				const t = elapsed % cycleLength;
+				if (t < PauseDuration) {
+					target.Rotation = originalRotationRef.current!;
+					return;
+				}
+				const shakeElapsed = t - PauseDuration;
+				let amplitude = Intensity;
+				if (Decay) {
+					amplitude *= 1 - shakeElapsed / shakeSegmentDuration;
+				}
+				target.Rotation = originalRotationRef.current! + amplitude * math.sin(shakeElapsed * Speed);
+				return;
+			}
+
+			if (shakeSegmentDuration !== -1 && elapsed >= shakeSegmentDuration) {
 				cleanup(target);
 				if (OnFinished) OnFinished();
 				return;
 			}
 
 			let amplitude = Intensity;
-			if (Decay && Duration !== -1) {
-				amplitude *= 1 - elapsed / Duration;
+			if (Decay && shakeSegmentDuration !== -1) {
+				amplitude *= 1 - elapsed / shakeSegmentDuration;
 			}
 
 			target.Rotation = originalRotationRef.current! + amplitude * math.sin(elapsed * Speed);
@@ -80,7 +102,7 @@ export function MotionRotationShake(props: MotionRotationShakeProps) {
 		return () => {
 			cleanup(targetRef.current);
 		};
-	}, [props.Duration, props.Intensity, props.Speed, props.Decay]);
+	}, [props.Duration, props.PauseDuration, props.Intensity, props.Speed, props.Decay]);
 
 	React.useEffect(() => {
 		if (ref.current) {
