@@ -5,6 +5,31 @@ import { DragContext, DropInfo, pickBestContainer } from "./drag-context";
 
 const DRAG_THRESHOLD = 6;
 
+function isDragInputType(inputType: Enum.UserInputType): boolean {
+	return inputType === Enum.UserInputType.MouseButton1 || inputType === Enum.UserInputType.Touch;
+}
+
+function getPointerPosition(activeInput: InputObject | undefined): Vector2 {
+	if (activeInput && activeInput.UserInputType === Enum.UserInputType.Touch) {
+		const pos = activeInput.Position;
+		return new Vector2(pos.X, pos.Y);
+	}
+	return UserInputService.GetMouseLocation();
+}
+
+function isMatchingDragEndInput(activeInput: InputObject | undefined, endInput: InputObject): boolean {
+	if (!activeInput) return false;
+	if (endInput === activeInput) return true;
+	if (endInput.UserInputType !== activeInput.UserInputType) return false;
+
+	// Mouse only has one primary button source; touch fallback handles cases where
+	// Roblox provides a different InputObject instance for the same finger.
+	return (
+		activeInput.UserInputType === Enum.UserInputType.MouseButton1 ||
+		activeInput.UserInputType === Enum.UserInputType.Touch
+	);
+}
+
 // ── Module-level ghost store ──────────────────────────────────────────────────
 
 type ContentListener = (content: React.ReactNode) => void;
@@ -191,6 +216,7 @@ export function useDragClone(config: UseDragCloneConfig): {
 	const startPosRef = React.useRef(new Vector2(0, 0));
 	const thresholdMetRef = React.useRef(false);
 	const sourceGuiRef = React.useRef<ImageButton | undefined>(undefined);
+	const activeInputRef = React.useRef<InputObject | undefined>(undefined);
 	const renderSteppedConnRef = React.useRef<RBXScriptConnection | undefined>(undefined);
 	const inputEndedConnRef = React.useRef<RBXScriptConnection | undefined>(undefined);
 
@@ -203,6 +229,7 @@ export function useDragClone(config: UseDragCloneConfig): {
 		isDraggingRef.current = false;
 		thresholdMetRef.current = false;
 		sourceGuiRef.current = undefined;
+		activeInputRef.current = undefined;
 		setIsDragging(false);
 		ghostStore.setContent(undefined);
 		ghostStore.setHoveredContainer(undefined);
@@ -211,17 +238,18 @@ export function useDragClone(config: UseDragCloneConfig): {
 	// Stable input handler — reads all values through refs so it never needs to be recreated.
 	const onInputBegan = React.useRef((rbx: ImageButton, input: InputObject) => {
 		if (!enabledRef.current) return;
-		if (input.UserInputType !== Enum.UserInputType.MouseButton1) return;
+		if (!isDragInputType(input.UserInputType)) return;
 		if (isDraggingRef.current) return;
 
 		isDraggingRef.current = true;
 		thresholdMetRef.current = false;
 		sourceGuiRef.current = rbx;
-		startPosRef.current = UserInputService.GetMouseLocation();
+		activeInputRef.current = input;
+		startPosRef.current = getPointerPosition(input);
 
 		renderSteppedConnRef.current?.Disconnect();
 		renderSteppedConnRef.current = RunService.RenderStepped.Connect(() => {
-			const pos = UserInputService.GetMouseLocation();
+			const pos = getPointerPosition(activeInputRef.current);
 
 			if (!thresholdMetRef.current) {
 				const delta = pos.sub(startPosRef.current);
@@ -241,10 +269,10 @@ export function useDragClone(config: UseDragCloneConfig): {
 
 		inputEndedConnRef.current?.Disconnect();
 		inputEndedConnRef.current = UserInputService.InputEnded.Connect((endInput) => {
-			if (endInput.UserInputType !== Enum.UserInputType.MouseButton1) return;
+			if (!isMatchingDragEndInput(activeInputRef.current, endInput)) return;
 
 			if (thresholdMetRef.current) {
-				const finalPos = UserInputService.GetMouseLocation();
+				const finalPos = getPointerPosition(activeInputRef.current);
 				const containers = registryRef.current.getContainers();
 				const best = pickBestContainer(containers, finalPos, draggableIdRef.current);
 				if (best) {
