@@ -25,7 +25,7 @@ const defaultProps = {
 };
 
 export function Sound(props: SoundProps) {
-	// print("Rendering Sound Component");
+
 	const {
 		Id,
 		Volume = defaultProps.Volume,
