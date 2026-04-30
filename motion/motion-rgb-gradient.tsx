@@ -5,6 +5,8 @@ export interface MotionRgbGradientProps {
 	Speed?: number;
 	Direction?: "Left" | "Right";
 	Rotation?: number;
+	/** When true, recomputes the gradient every `Heartbeat`; when false (default), every 3rd tick to reduce work. */
+	UpdateEveryFrame?: boolean;
 }
 
 const defaultProps: Partial<MotionRgbGradientProps> = {
@@ -18,7 +20,9 @@ export function MotionRgbGradient(props: MotionRgbGradientProps) {
 		Speed = defaultProps.Speed!,
 		Direction = defaultProps.Direction!,
 		Rotation = defaultProps.Rotation,
+		UpdateEveryFrame = false,
 	} = props;
+	const frameStride = UpdateEveryFrame ? 1 : 3;
 	const [colorBinding, setColorBinding] = React.useBinding(new ColorSequence(Color3.fromRGB(255, 0, 0)));
 	const connectionRef = React.useRef<RBXScriptConnection>();
 
@@ -26,7 +30,7 @@ export function MotionRgbGradient(props: MotionRgbGradientProps) {
 		let frameSkip = 0;
 		connectionRef.current = RunService.Heartbeat.Connect(() => {
 			frameSkip++;
-			if (frameSkip % 3 !== 0) return;
+			if (frameSkip % frameStride !== 0) return;
 			const speedVal = Speed;
 			const time = os.clock();
 
@@ -49,7 +53,7 @@ export function MotionRgbGradient(props: MotionRgbGradientProps) {
 		return () => {
 			connectionRef.current?.Disconnect();
 		};
-	}, [Speed, Direction]);
+	}, [Speed, Direction, UpdateEveryFrame]);
 
 	return <uigradient Color={colorBinding} Rotation={Rotation} />;
 }
