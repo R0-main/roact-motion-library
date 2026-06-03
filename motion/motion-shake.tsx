@@ -2,9 +2,12 @@ import React from "@rbxts/react";
 import { RunService } from "@rbxts/services";
 
 export interface MotionShakeProps {
-	Duration?: number; // How long to shake (defaults to 0.5s)
-	Intensity?: number; // Magnitude of the shake (defaults to 5 pixels)
-	Decay?: boolean; // If true, shake reduces over time
+	Duration?: number;
+	/** Seconds of idle between shake bursts. When > 0, shakes for `Duration` then pauses, repeating. */
+	PauseDuration?: number;
+	Intensity?: number;
+	Decay?: boolean;
+	/** One-shot: delay before shake starts. Cyclic: phase offset within each pause/shake cycle. */
 	Delay?: number;
 	OnFinished?: () => void;
 	OnStart?: () => void;
@@ -12,6 +15,7 @@ export interface MotionShakeProps {
 
 const defaultProps: Partial<MotionShakeProps> = {
 	Duration: 0.5,
+	PauseDuration: 0,
 	Intensity: 5,
 	Decay: true,
 	Delay: 0,
@@ -23,20 +27,38 @@ export function MotionShake(props: MotionShakeProps) {
 	const originalPositionRef = React.useRef<UDim2>();
 	const targetRef = React.useRef<GuiObject>();
 
-	function cleanup(parent?: GuiObject) {
-		if (connectionRef.current) {
-			connectionRef.current.Disconnect();
-			connectionRef.current = undefined;
-		}
-		// Reset to original position if we have it and the parent is still there
+	function resetPosition(parent?: GuiObject) {
 		if (originalPositionRef.current && parent) {
 			parent.Position = originalPositionRef.current;
 		}
 	}
 
+	function cleanup(parent?: GuiObject) {
+		if (connectionRef.current) {
+			connectionRef.current.Disconnect();
+			connectionRef.current = undefined;
+		}
+		resetPosition(parent);
+	}
+
+	function applyShakeOffset(target: GuiObject, intensity: number) {
+		if (!originalPositionRef.current) return;
+
+		const offsetX = (math.random() - 0.5) * 2 * intensity;
+		const offsetY = (math.random() - 0.5) * 2 * intensity;
+
+		target.Position = new UDim2(
+			originalPositionRef.current.X.Scale,
+			originalPositionRef.current.X.Offset + offsetX,
+			originalPositionRef.current.Y.Scale,
+			originalPositionRef.current.Y.Offset + offsetY,
+		);
+	}
+
 	function startShake(target: GuiObject) {
 		const {
 			Duration = defaultProps.Duration!,
+			PauseDuration = defaultProps.PauseDuration!,
 			Intensity = defaultProps.Intensity!,
 			Decay = defaultProps.Decay!,
 			Delay = defaultProps.Delay!,
@@ -48,9 +70,28 @@ export function MotionShake(props: MotionShakeProps) {
 			if (OnStart) OnStart();
 
 			const startTime = tick();
+			const cyclic = PauseDuration > 0;
+			const shakeSegmentDuration = cyclic ? (Duration === -1 ? 1 : Duration) : Duration;
 
 			connectionRef.current = RunService.Heartbeat.Connect(() => {
 				const elapsed = tick() - startTime;
+
+				if (cyclic) {
+					const cycleLength = PauseDuration + shakeSegmentDuration;
+					const t = (elapsed + Delay) % cycleLength;
+					if (t < PauseDuration) {
+						resetPosition(target);
+						return;
+					}
+
+					const shakeElapsed = t - PauseDuration;
+					let currentIntensity = Intensity;
+					if (Decay) {
+						currentIntensity *= 1 - shakeElapsed / shakeSegmentDuration;
+					}
+					applyShakeOffset(target, currentIntensity);
+					return;
+				}
 
 				if (Duration !== -1 && elapsed >= Duration) {
 					cleanup(target);
@@ -58,30 +99,15 @@ export function MotionShake(props: MotionShakeProps) {
 					return;
 				}
 
-				// Calculate current intensity
 				let currentIntensity = Intensity;
 				if (Decay && Duration !== -1) {
-					const alpha = 1 - elapsed / Duration;
-					currentIntensity *= alpha;
+					currentIntensity *= 1 - elapsed / Duration;
 				}
-
-				// Random offset
-				const offsetX = (math.random() - 0.5) * 2 * currentIntensity;
-				const offsetY = (math.random() - 0.5) * 2 * currentIntensity;
-
-				// Apply to original position
-				if (originalPositionRef.current) {
-					target.Position = new UDim2(
-						originalPositionRef.current.X.Scale,
-						originalPositionRef.current.X.Offset + offsetX,
-						originalPositionRef.current.Y.Scale,
-						originalPositionRef.current.Y.Offset + offsetY,
-					);
-				}
+				applyShakeOffset(target, currentIntensity);
 			});
 		};
 
-		if (Delay !== undefined && Delay > 0) {
+		if (!PauseDuration && Delay > 0) {
 			task.delay(Delay, runShake);
 		} else {
 			runShake();
@@ -93,7 +119,7 @@ export function MotionShake(props: MotionShakeProps) {
 		const parent = folder?.Parent;
 
 		if (parent && parent.IsA("GuiObject")) {
-			originalPositionRef.current = parent.Position; // Capture original position
+			originalPositionRef.current = parent.Position;
 			targetRef.current = parent;
 			startShake(parent);
 		} else {
@@ -103,7 +129,7 @@ export function MotionShake(props: MotionShakeProps) {
 		return () => {
 			cleanup(targetRef.current);
 		};
-	}, [props.Duration, props.Intensity, props.Decay, props.Delay]);
+	}, [props.Duration, props.PauseDuration, props.Intensity, props.Decay, props.Delay]);
 
 	React.useEffect(() => {
 		if (ref.current) {
