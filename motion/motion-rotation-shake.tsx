@@ -5,6 +5,8 @@ export interface MotionRotationShakeProps {
 	Duration?: number;
 	/** Seconds of idle between shake bursts. When > 0, shakes for `Duration` (or 1s if Duration is -1) then pauses, repeating. */
 	PauseDuration?: number;
+	/** Phase offset in seconds within each pause/shake cycle (stagger multiple instances). */
+	Delay?: number;
 	Intensity?: number;
 	Speed?: number;
 	Decay?: boolean;
@@ -15,6 +17,7 @@ export interface MotionRotationShakeProps {
 const defaultProps: Partial<MotionRotationShakeProps> = {
 	Duration: -1,
 	PauseDuration: 0,
+	Delay: 0,
 	Intensity: 1,
 	Speed: 18,
 	Decay: false,
@@ -40,6 +43,7 @@ export function MotionRotationShake(props: MotionRotationShakeProps) {
 		const {
 			Duration = defaultProps.Duration!,
 			PauseDuration = defaultProps.PauseDuration!,
+			Delay = defaultProps.Delay!,
 			Intensity = defaultProps.Intensity!,
 			Speed = defaultProps.Speed!,
 			Decay = defaultProps.Decay!,
@@ -59,7 +63,7 @@ export function MotionRotationShake(props: MotionRotationShakeProps) {
 
 			if (cyclic) {
 				const cycleLength = PauseDuration + shakeSegmentDuration;
-				const t = elapsed % cycleLength;
+				const t = (elapsed + Delay) % cycleLength;
 				if (t < PauseDuration) {
 					target.Rotation = originalRotationRef.current!;
 					return;
@@ -102,7 +106,7 @@ export function MotionRotationShake(props: MotionRotationShakeProps) {
 		return () => {
 			cleanup(targetRef.current);
 		};
-	}, [props.Duration, props.PauseDuration, props.Intensity, props.Speed, props.Decay]);
+	}, [props.Duration, props.PauseDuration, props.Delay, props.Intensity, props.Speed, props.Decay]);
 
 	React.useEffect(() => {
 		if (ref.current) {
