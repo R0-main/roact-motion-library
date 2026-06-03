@@ -9,6 +9,8 @@ export interface MotionShakeProps {
 	Decay?: boolean;
 	/** One-shot: delay before shake starts. Cyclic: phase offset within each pause/shake cycle. */
 	Delay?: number;
+	/** Shared start time so multiple instances stay in sync (cyclic mode). */
+	StartTime?: number;
 	OnFinished?: () => void;
 	OnStart?: () => void;
 }
@@ -62,6 +64,7 @@ export function MotionShake(props: MotionShakeProps) {
 			Intensity = defaultProps.Intensity!,
 			Decay = defaultProps.Decay!,
 			Delay = defaultProps.Delay!,
+			StartTime,
 			OnStart,
 			OnFinished,
 		} = props;
@@ -69,7 +72,7 @@ export function MotionShake(props: MotionShakeProps) {
 		const runShake = () => {
 			if (OnStart) OnStart();
 
-			const startTime = tick();
+			const startTime = StartTime ?? tick();
 			const cyclic = PauseDuration > 0;
 			const shakeSegmentDuration = cyclic ? (Duration === -1 ? 1 : Duration) : Duration;
 
@@ -129,7 +132,7 @@ export function MotionShake(props: MotionShakeProps) {
 		return () => {
 			cleanup(targetRef.current);
 		};
-	}, [props.Duration, props.PauseDuration, props.Intensity, props.Decay, props.Delay]);
+	}, [props.Duration, props.PauseDuration, props.Intensity, props.Decay, props.Delay, props.StartTime]);
 
 	React.useEffect(() => {
 		if (ref.current) {
