@@ -35,17 +35,24 @@ function isMatchingDragEndInput(activeInput: InputObject | undefined, endInput: 
 type ContentListener = (content: React.ReactNode) => void;
 type PositionListener = (pos: UDim2) => void;
 type HoveredListener = (containerId: string | undefined) => void;
+type SizeListener = (size: UDim2 | undefined) => void;
 
 let _ghostContent: React.ReactNode = undefined;
+let _ghostSize: UDim2 | undefined = undefined;
 let _contentListeners: ContentListener[] = [];
 let _positionListeners: PositionListener[] = [];
 let _hoveredContainerId: string | undefined = undefined;
 let _hoveredListeners: HoveredListener[] = [];
+let _sizeListeners: SizeListener[] = [];
 
 const ghostStore = {
 	setContent(content: React.ReactNode) {
 		_ghostContent = content;
 		_contentListeners.forEach((l) => l(content));
+	},
+	setSize(size: UDim2 | undefined) {
+		_ghostSize = size;
+		_sizeListeners.forEach((l) => l(size));
 	},
 	setPosition(pos: Vector2) {
 		const udim = UDim2.fromOffset(pos.X, pos.Y);
@@ -59,6 +66,9 @@ const ghostStore = {
 	getContent() {
 		return _ghostContent;
 	},
+	getSize() {
+		return _ghostSize;
+	},
 	getHoveredContainer() {
 		return _hoveredContainerId;
 	},
@@ -66,6 +76,12 @@ const ghostStore = {
 		_contentListeners.push(listener);
 		return () => {
 			_contentListeners = _contentListeners.filter((l) => l !== listener);
+		};
+	},
+	subscribeSize(listener: SizeListener): () => void {
+		_sizeListeners.push(listener);
+		return () => {
+			_sizeListeners = _sizeListeners.filter((l) => l !== listener);
 		};
 	},
 	subscribePosition(listener: PositionListener): () => void {
@@ -110,14 +126,17 @@ export function useIsHoveredDropTarget(containerId: string): boolean {
  */
 export function DragCloneLayer() {
 	const [content, setContent] = React.useState<React.ReactNode>(ghostStore.getContent());
+	const [size, setSize] = React.useState<UDim2 | undefined>(ghostStore.getSize());
 	const [posBinding, setPosBinding] = React.useBinding(UDim2.fromOffset(0, 0));
 	const [portalTarget, setPortalTarget] = React.useState<Instance | undefined>(undefined);
 
 	React.useEffect(() => {
 		const unsubContent = ghostStore.subscribeContent(setContent);
+		const unsubSize = ghostStore.subscribeSize(setSize);
 		const unsubPos = ghostStore.subscribePosition(setPosBinding);
 		return () => {
 			unsubContent();
+			unsubSize();
 			unsubPos();
 		};
 	}, []);
@@ -153,7 +172,7 @@ export function DragCloneLayer() {
 						<canvasgroup
 							Position={posBinding}
 							AnchorPoint={new Vector2(0.5, 0.5)}
-							Size={new UDim2(0, 220, 0, 68)}
+							Size={size ?? new UDim2(0, 220, 0, 68)}
 							GroupTransparency={0.15}
 							BackgroundTransparency={1}
 							BorderSizePixel={0}
@@ -173,6 +192,7 @@ export interface UseDragCloneConfig {
 	draggableId: string;
 	enabled?: boolean;
 	renderGhost: () => React.ReactNode;
+	ghostSize?: UDim2;
 	onDrop?: (info: DropInfo) => void;
 }
 
@@ -203,6 +223,9 @@ export function useDragClone(config: UseDragCloneConfig): {
 	const renderGhostRef = React.useRef(config.renderGhost);
 	renderGhostRef.current = config.renderGhost;
 
+	const ghostSizeRef = React.useRef(config.ghostSize);
+	ghostSizeRef.current = config.ghostSize;
+
 	const onDropRef = React.useRef(config.onDrop);
 	onDropRef.current = config.onDrop;
 
@@ -232,6 +255,7 @@ export function useDragClone(config: UseDragCloneConfig): {
 		activeInputRef.current = undefined;
 		setIsDragging(false);
 		ghostStore.setContent(undefined);
+		ghostStore.setSize(undefined);
 		ghostStore.setHoveredContainer(undefined);
 	}).current;
 
@@ -256,6 +280,7 @@ export function useDragClone(config: UseDragCloneConfig): {
 				if (math.abs(delta.X) > DRAG_THRESHOLD || math.abs(delta.Y) > DRAG_THRESHOLD) {
 					thresholdMetRef.current = true;
 					setIsDragging(true);
+					ghostStore.setSize(ghostSizeRef.current);
 					ghostStore.setContent(renderGhostRef.current());
 					ghostStore.setPosition(pos);
 				}
