@@ -5,7 +5,7 @@ export interface MotionRotationShakeProps {
 	Duration?: number;
 	/** Seconds of idle between shake bursts. When > 0, shakes for `Duration` (or 1s if Duration is -1) then pauses, repeating. */
 	PauseDuration?: number;
-	/** Phase offset in seconds within each pause/shake cycle (stagger multiple instances). */
+	/** Cyclic mode: phase offset within each pause/shake cycle. Continuous mode (Duration -1): seconds idle before shake starts. */
 	Delay?: number;
 	Intensity?: number;
 	Speed?: number;
@@ -83,12 +83,18 @@ export function MotionRotationShake(props: MotionRotationShakeProps) {
 				return;
 			}
 
-			let amplitude = Intensity;
-			if (Decay && shakeSegmentDuration !== -1) {
-				amplitude *= 1 - elapsed / shakeSegmentDuration;
+			if (Delay > 0 && elapsed < Delay) {
+				target.Rotation = originalRotationRef.current!;
+				return;
 			}
 
-			target.Rotation = originalRotationRef.current! + amplitude * math.sin(elapsed * Speed);
+			const shakeElapsed = elapsed - Delay;
+			let amplitude = Intensity;
+			if (Decay && shakeSegmentDuration !== -1) {
+				amplitude *= 1 - shakeElapsed / shakeSegmentDuration;
+			}
+
+			target.Rotation = originalRotationRef.current! + amplitude * math.sin(shakeElapsed * Speed);
 		});
 	}
 
