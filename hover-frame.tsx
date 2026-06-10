@@ -2,6 +2,7 @@ import React from "@rbxts/react";
 import { createPortal } from "@rbxts/react-roblox";
 import { Players, RunService, UserInputService } from "@rbxts/services";
 import { MotionFade } from "./motion/motion-fade";
+import { DeviceUtils } from "shared/utils/device-utils";
 
 export interface HoverFrameProps {
 	FadeTime?: number;
@@ -19,7 +20,7 @@ const defaultProps: Partial<HoverFrameProps> = {
 };
 
 export function HoverFrame(props: HoverFrameProps) {
-	const {
+	let {
 		FadeTime = defaultProps.FadeTime!,
 		Offset = defaultProps.Offset!,
 		ZIndex,
@@ -28,12 +29,18 @@ export function HoverFrame(props: HoverFrameProps) {
 		children,
 	} = props;
 
+	if (DeviceUtils.IsMobile() || DeviceUtils.IsTablet()) {
+		Offset = new Vector2(0, 0);
+	}
+
 	const triggerRef = React.useRef<Folder>();
 	const [hovered, setHovered] = React.useState(false);
 	const [rendering, setRendering] = React.useState(false);
 	const [positionBinding, setPositionBinding] = React.useBinding(UDim2.fromOffset(0, 0));
 	const [portalTarget, setPortalTarget] = React.useState<Instance | undefined>(undefined);
+	const [dynamicOffset, setDynamicOffset] = React.useState(Offset);
 	const rootGuiRef = React.useRef<Frame>();
+	const canvasGroupRef = React.useRef<CanvasGroup>();
 	const connEnterRef = React.useRef<RBXScriptConnection>();
 	const connLeaveRef = React.useRef<RBXScriptConnection>();
 	const connRenderRef = React.useRef<RBXScriptConnection>();
@@ -106,10 +113,26 @@ export function HoverFrame(props: HoverFrameProps) {
 
 		if (rendering) {
 			connRenderRef.current = RunService.RenderStepped.Connect(() => {
+				const canvasGroup = canvasGroupRef.current;
 				const mousePos = UserInputService.GetMouseLocation();
 				const origin = rootGuiRef.current?.AbsolutePosition ?? new Vector2(0, 0);
 				const relative = mousePos.sub(origin);
-				setPositionBinding(UDim2.fromOffset(relative.X + Offset.X, relative.Y + Offset.Y));
+
+				// Calculate offset based on the first child's absolute size
+				let computedOffset = new Vector2(0, 0);
+				if (canvasGroup) {
+					const firstChild = canvasGroup.FindFirstChildWhichIsA("Frame") ?? canvasGroup.FindFirstChildWhichIsA("ImageLabel") ?? canvasGroup.FindFirstChildWhichIsA("TextLabel") ?? canvasGroup.FindFirstChildWhichIsA("CanvasGroup") ?? canvasGroup.FindFirstChildWhichIsA("ImageButton");
+					if (firstChild && firstChild.IsA("GuiObject")) {
+						const absoluteSize = firstChild.AbsoluteSize;
+						computedOffset = new Vector2(absoluteSize.X, absoluteSize.Y);
+					}
+				}
+
+				if (DeviceUtils.IsMobile() || DeviceUtils.IsTablet()) {
+					computedOffset.add(new Vector2(-50, 0));
+				}
+
+				setPositionBinding(UDim2.fromOffset(relative.X - (computedOffset.X), relative.Y - computedOffset.Y));
 			});
 		}
 
@@ -141,18 +164,21 @@ export function HoverFrame(props: HoverFrameProps) {
 						>
 							<frame
 								ref={rootGuiRef}
-								BackgroundTransparency={1}
+								BackgroundTransparency={0}
 								BorderSizePixel={0}
+								BackgroundColor3={new Color3(255, 0, 0)}
 								Size={UDim2.fromScale(1, 1)}
 								Position={UDim2.fromOffset(0, 0)}
 							>
 								<canvasgroup
+									ref={canvasGroupRef}
 									GroupTransparency={1} // Start invisible, MotionFade will handle it
 									Position={positionBinding}
-									Size={Size ?? UDim2.fromOffset(0, 0)}
+									Size={UDim2.fromOffset(0, 0)}
 									AutomaticSize={Enum.AutomaticSize.XY}
 									BorderSizePixel={0}
-									BackgroundTransparency={1}
+									BackgroundTransparency={0}
+									BackgroundColor3={new Color3(255, 0, 0)}
 									ZIndex={ZIndex}
 								>
 									<MotionFade
@@ -179,6 +205,7 @@ export function HoverFrame(props: HoverFrameProps) {
 							ZIndex={ZIndex}
 						>
 							<canvasgroup
+								ref={canvasGroupRef}
 								GroupTransparency={1} // Start invisible, MotionFade will handle it
 								Position={positionBinding}
 								Size={Size ?? UDim2.fromOffset(0, 0)}
