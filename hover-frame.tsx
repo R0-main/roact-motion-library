@@ -1,6 +1,6 @@
 import React from "@rbxts/react";
 import { createPortal } from "@rbxts/react-roblox";
-import { Players, RunService, UserInputService } from "@rbxts/services";
+import { Players, RunService, UserInputService, GuiService } from "@rbxts/services";
 import { MotionFade } from "./motion/motion-fade";
 import { DeviceUtils } from "shared/utils/device-utils";
 
@@ -45,6 +45,8 @@ export function HoverFrame(props: HoverFrameProps) {
 	const connLeaveRef = React.useRef<RBXScriptConnection>();
 	const connRenderRef = React.useRef<RBXScriptConnection>();
 	const connPlayerGuiRef = React.useRef<RBXScriptConnection>();
+	const connSelectGainedRef = React.useRef<RBXScriptConnection>();
+	const connSelectLostRef = React.useRef<RBXScriptConnection>();
 
 	React.useEffect(() => {
 		const folder = triggerRef.current;
@@ -107,6 +109,13 @@ export function HoverFrame(props: HoverFrameProps) {
 			connLeaveRef.current = parent.MouseLeave.Connect(() => {
 				setHovered(false);
 			});
+			connSelectGainedRef.current = parent.SelectionGained.Connect(() => {
+				setHovered(true);
+				setRendering(true);
+			});
+			connSelectLostRef.current = parent.SelectionLost.Connect(() => {
+				setHovered(false);
+			});
 		} else {
 			warn("HoverFrame must be a child of a GuiObject");
 		}
@@ -114,9 +123,16 @@ export function HoverFrame(props: HoverFrameProps) {
 		if (rendering) {
 			connRenderRef.current = RunService.RenderStepped.Connect(() => {
 				const canvasGroup = canvasGroupRef.current;
-				const mousePos = UserInputService.GetMouseLocation();
 				const origin = rootGuiRef.current?.AbsolutePosition ?? new Vector2(0, 0);
-				const relative = mousePos.sub(origin);
+				let relative: Vector2;
+
+				if (parent && parent.IsA("GuiObject") && GuiService.SelectedObject === parent) {
+					const parentPos = parent.AbsolutePosition;
+					relative = parentPos.sub(origin);
+				} else {
+					const mousePos = UserInputService.GetMouseLocation();
+					relative = mousePos.sub(origin);
+				}
 
 				// Calculate offset based on the first child's absolute size
 				let computedOffset = new Vector2(0, 0);
@@ -129,16 +145,18 @@ export function HoverFrame(props: HoverFrameProps) {
 				}
 
 				if (DeviceUtils.IsMobile() || DeviceUtils.IsTablet()) {
-					computedOffset.add(new Vector2(-50, 0));
+					computedOffset = new Vector2(computedOffset.X - 50, computedOffset.Y);
 				}
 
-				setPositionBinding(UDim2.fromOffset(relative.X - (computedOffset.X), relative.Y - computedOffset.Y));
+				setPositionBinding(UDim2.fromOffset(relative.X + Offset.X - computedOffset.X, relative.Y + Offset.Y - computedOffset.Y));
 			});
 		}
 
 		return () => {
 			connEnterRef.current?.Disconnect();
 			connLeaveRef.current?.Disconnect();
+			connSelectGainedRef.current?.Disconnect();
+			connSelectLostRef.current?.Disconnect();
 			connRenderRef.current?.Disconnect();
 		};
 	}, [Offset, rendering]);
