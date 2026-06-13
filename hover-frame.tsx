@@ -122,33 +122,17 @@ export function HoverFrame(props: HoverFrameProps) {
 
 		if (rendering) {
 			connRenderRef.current = RunService.RenderStepped.Connect(() => {
-				const canvasGroup = canvasGroupRef.current;
+				const mousePos = UserInputService.GetMouseLocation();
 				const origin = rootGuiRef.current?.AbsolutePosition ?? new Vector2(0, 0);
-				let relative: Vector2;
+				const relative = mousePos.sub(origin);
 
-				if (parent && parent.IsA("GuiObject") && GuiService.SelectedObject === parent) {
-					const parentPos = parent.AbsolutePosition;
-					relative = parentPos.sub(origin);
-				} else {
-					const mousePos = UserInputService.GetMouseLocation();
-					relative = mousePos.sub(origin);
-				}
+				// Use the first GuiObject child's size — canvasGroup.AbsoluteSize is unreliable
+				// on first frame with AutomaticSize=XY since it may inherit the parent's size
+				const canvasGroup = canvasGroupRef.current;
+				const firstChild = canvasGroup?.FindFirstChildWhichIsA("GuiObject") as GuiObject | undefined;
+				const size = firstChild?.AbsoluteSize ?? new Vector2(0, 0);
 
-				// Calculate offset based on the first child's absolute size
-				let computedOffset = new Vector2(0, 0);
-				if (canvasGroup) {
-					const firstChild = canvasGroup.FindFirstChildWhichIsA("Frame") ?? canvasGroup.FindFirstChildWhichIsA("ImageLabel") ?? canvasGroup.FindFirstChildWhichIsA("TextLabel") ?? canvasGroup.FindFirstChildWhichIsA("CanvasGroup") ?? canvasGroup.FindFirstChildWhichIsA("ImageButton");
-					if (firstChild && firstChild.IsA("GuiObject")) {
-						const absoluteSize = firstChild.AbsoluteSize;
-						computedOffset = new Vector2(absoluteSize.X, absoluteSize.Y);
-					}
-				}
-
-				if (DeviceUtils.IsMobile() || DeviceUtils.IsTablet()) {
-					computedOffset = new Vector2(computedOffset.X - 50, computedOffset.Y);
-				}
-
-				setPositionBinding(UDim2.fromOffset(relative.X + Offset.X - computedOffset.X, relative.Y + Offset.Y - computedOffset.Y));
+				setPositionBinding(UDim2.fromOffset(relative.X - size.X, relative.Y - size.Y));
 			});
 		}
 
