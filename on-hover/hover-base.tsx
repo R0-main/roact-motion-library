@@ -39,10 +39,9 @@ export function HoverBase(props: HoverBaseProps) {
 			const folder = ref.current;
 			if (!folder) return;
 
-			let target: GuiObject | undefined =
-				folder.Parent?.IsA("GuiObject")
-					? (folder.Parent as GuiObject)
-					: (folder.FindFirstAncestorWhichIsA("GuiObject") as GuiObject | undefined);
+			let target: GuiObject | undefined = folder.Parent?.IsA("GuiObject")
+				? (folder.Parent as GuiObject)
+				: (folder.FindFirstAncestorWhichIsA("GuiObject") as GuiObject | undefined);
 
 			if (!target) {
 				task.wait(0);

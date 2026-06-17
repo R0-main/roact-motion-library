@@ -25,7 +25,6 @@ const defaultProps = {
 };
 
 export function Sound(props: SoundProps) {
-
 	const {
 		Id,
 		Volume = defaultProps.Volume,

@@ -68,4 +68,3 @@ export function DraggableContainer(props: DraggableContainerProps) {
 		</>
 	);
 }
-

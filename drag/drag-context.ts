@@ -59,12 +59,7 @@ export function findNearestGuiObjectFromFolder(folder: Folder): GuiObject | unde
 export function isPointInGuiObject(point: Vector2, gui: GuiObject): boolean {
 	const pos = gui.AbsolutePosition;
 	const size = gui.AbsoluteSize;
-	return (
-		point.X >= pos.X &&
-		point.Y >= pos.Y &&
-		point.X <= pos.X + size.X &&
-		point.Y <= pos.Y + size.Y
-	);
+	return point.X >= pos.X && point.Y >= pos.Y && point.X <= pos.X + size.X && point.Y <= pos.Y + size.Y;
 }
 
 export function pickBestContainer(
@@ -100,4 +95,3 @@ export function pickBestContainer(
 
 	return best;
 }
-
