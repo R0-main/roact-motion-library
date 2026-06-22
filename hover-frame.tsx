@@ -132,7 +132,12 @@ export function HoverFrame(props: HoverFrameProps) {
 				const firstChild = canvasGroup?.FindFirstChildWhichIsA("GuiObject") as GuiObject | undefined;
 				const size = firstChild?.AbsoluteSize ?? new Vector2(0, 0);
 
-				setPositionBinding(UDim2.fromOffset(relative.X - size.X, relative.Y - size.Y));
+				let offsetX = size.X;
+				if (DeviceUtils.IsMobile() || DeviceUtils.IsTablet()) {
+					offsetX += 50;
+				}
+
+				setPositionBinding(UDim2.fromOffset(relative.X - offsetX, relative.Y - size.Y));
 			});
 		}
 
